@@ -17,21 +17,26 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
-# --- ডাটাবেস মডেল (অ্যাডমিন টেবিল) ---
+# --- ডাটাবেস মডেল ---
 class AdminUser(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
-    yt_cookies = db.Column(db.Text, nullable=True) # আইপি ব্লক এড়ানোর জন্য
+    yt_cookies = db.Column(db.Text, nullable=True)
+    ad_popunder = db.Column(db.Text, nullable=True)
+    ad_socialbar = db.Column(db.Text, nullable=True)
+    ad_native = db.Column(db.Text, nullable=True)
+    ad_banner = db.Column(db.Text, nullable=True)
+    ad_direct_link = db.Column(db.String(500), nullable=True)
+    ad_direct_count = db.Column(db.Integer, default=0)
 
 @login_manager.user_loader
 def load_user(user_id):
     return AdminUser.query.get(int(user_id))
 
-# --- ভিডিও ডাউনলোডার লজিক (উন্নত) ---
+# --- ভিডিও ডাউনলোডার লজিক ---
 def fetch_video_data(url):
     admin = AdminUser.query.filter_by(username='admin').first()
-    
     ydl_opts = {
         'format': 'best',
         'quiet': True,
@@ -39,8 +44,6 @@ def fetch_video_data(url):
         'nocheckcertificate': True,
         'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
     }
-
-    # কুকিজ ফাইল তৈরি করা (যদি থাকে)
     if admin and admin.yt_cookies:
         with open('temp_cookies.txt', 'w') as f:
             f.write(admin.yt_cookies)
@@ -61,26 +64,23 @@ def fetch_video_data(url):
             return {
                 'title': info.get('title'),
                 'thumb': info.get('thumbnail'),
-                'duration': time.strftime('%H:%M:%S', time.gmtime(info.get('duration'))),
-                'views': info.get('view_count'),
+                'duration': time.strftime('%H:%M:%S', time.gmtime(info.get('duration') or 0)),
+                'views': info.get('view_count', 0),
                 'formats': formats[::-1]
             }
-        except Exception as e:
-            print(f"Error: {e}")
+        except:
             return None
 
-# --- স্লিপ মোড প্রতিরোধের লজিক (Keep-Alive) ---
 def keep_web_alive():
     while True:
         try:
-            url = f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME', 'localhost')}/"
-            requests.get(url)
-            print("Keep-Alive: Ping successful")
-        except:
-            pass
-        time.sleep(300) # প্রতি ৫ মিনিট পর পর
+            render_url = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+            url = f"https://{render_url}/" if render_url else "http://localhost:5000/"
+            requests.get(url, timeout=10)
+        except: pass
+        time.sleep(300)
 
-# --- সব ডিজাইন এক সাথে (HTML UI) ---
+# --- সম্পূর্ণ ডিজাইন এবং অ্যাড সিস্টেম ---
 MAIN_HTML = """
 <!DOCTYPE html>
 <html lang="bn">
@@ -90,19 +90,23 @@ MAIN_HTML = """
     <title>Premium YT Downloader</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    {% if admin %}
+    {{ admin.ad_popunder | safe if admin.ad_popunder }}
+    {{ admin.ad_socialbar | safe if admin.ad_socialbar }}
+    {% endif %}
+
     <style>
         :root { --primary: #FF0000; --secondary: #212121; }
-        body { background: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
         .navbar { background: white; border-bottom: 2px solid var(--primary); }
         .hero-section { background: white; border-radius: 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.05); padding: 50px 20px; margin-top: 30px; }
-        .search-box { border: 2px solid #ddd; border-radius: 50px; padding: 15px 30px; font-size: 1.1rem; transition: 0.3s; }
-        .search-box:focus { border-color: var(--primary); box-shadow: none; }
+        .search-box { border: 2px solid #ddd; border-radius: 50px; padding: 15px 30px; font-size: 1.1rem; }
         .btn-download { background: var(--primary); color: white; border-radius: 50px; padding: 15px 40px; font-weight: bold; border: none; }
-        .btn-download:hover { background: #cc0000; color: white; }
         .video-card { border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; background: white; }
-        .format-item { background: #f1f3f5; border-radius: 12px; margin-bottom: 10px; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: #333; transition: 0.2s; }
-        .format-item:hover { background: #e9ecef; transform: scale(1.02); }
-        .admin-sidebar { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .format-item { background: #f1f3f5; border-radius: 12px; margin-bottom: 10px; padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: #333; }
+        .format-item:hover { transform: scale(1.01); background: #e9ecef; }
+        .ad-container { text-align: center; margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -121,22 +125,22 @@ MAIN_HTML = """
     </nav>
 
     <div class="container">
+        <div class="ad-container">{% if admin %}{{ admin.ad_banner | safe if admin.ad_banner }}{% endif %}</div>
+
         {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                {% for message in messages %}
-                    <div class="alert alert-info mt-3 rounded-pill text-center shadow-sm">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
+            {% if messages %}{% for message in messages %}
+                <div class="alert alert-info mt-3 text-center shadow-sm">{{ message }}</div>
+            {% endfor %}{% endif %}
         {% endwith %}
 
         {% if page == 'home' %}
         <div class="hero-section text-center">
-            <h1 class="fw-bold text-dark mb-3">সহজেই ইউটিউব ভিডিও ডাউনলোড করুন</h1>
-            <p class="text-muted mb-5">কোনো অ্যাড নেই, হাই-কোয়ালিটি ভিডিও সরাসরি আপনার গ্যালারিতে।</p>
+            <h1 class="fw-bold text-dark mb-3">ইউটিউব ভিডিও ডাউনলোড করুন</h1>
+            <p class="text-muted mb-5">সরাসরি হাই-কোয়ালিটি ভিডিও ডাউনলোড।</p>
             <form method="POST" class="col-lg-8 mx-auto">
                 <div class="position-relative">
-                    <input type="text" name="url" class="form-control search-box" placeholder="ভিডিওর লিংক এখানে পেস্ট করুন..." required>
-                    <button class="btn btn-download position-absolute end-0 top-0 mt-1 me-1 shadow">Analyze</button>
+                    <input type="text" name="url" class="form-control search-box" placeholder="লিংক এখানে পেস্ট করুন..." required>
+                    <button class="btn btn-download position-absolute end-0 top-0 mt-1 me-1">Analyze</button>
                 </div>
             </form>
         </div>
@@ -144,22 +148,14 @@ MAIN_HTML = """
         {% if video %}
         <div class="video-card mt-5 col-lg-10 mx-auto">
             <div class="row g-0">
-                <div class="col-md-5">
-                    <img src="{{ video.thumb }}" class="img-fluid h-100" style="object-fit: cover;">
-                </div>
+                <div class="col-md-5"><img src="{{ video.thumb }}" class="img-fluid h-100" style="object-fit: cover;"></div>
                 <div class="col-md-7 p-4">
                     <h4 class="fw-bold mb-3">{{ video.title }}</h4>
-                    <div class="mb-4">
-                        <span class="badge bg-light text-dark border p-2 px-3 me-2"><i class="fa-clock me-1"></i> {{ video.duration }}</span>
-                        <span class="badge bg-light text-dark border p-2 px-3"><i class="fa-eye me-1"></i> {{ video.views }} Views</span>
-                    </div>
+                    <div class="mb-3">{% if admin %}{{ admin.ad_native | safe if admin.ad_native }}{% endif %}</div>
                     <div class="formats-list">
                         {% for f in video.formats[:7] %}
-                        <a href="{{ f.url }}" target="_blank" class="format-item shadow-sm">
-                            <div>
-                                <i class="fa-video me-2 text-danger"></i>
-                                <strong>{{ f.res }}</strong> <span class="text-muted small">({{ f.ext | upper }})</span>
-                            </div>
+                        <a href="javascript:void(0)" onclick="handleDownload('{{ f.url }}')" class="format-item shadow-sm">
+                            <div><i class="fa-video me-2 text-danger"></i><strong>{{ f.res }}</strong></div>
                             <span class="badge bg-success rounded-pill">{{ f.size }} MB <i class="fa-download ms-1"></i></span>
                         </a>
                         {% endfor %}
@@ -170,101 +166,124 @@ MAIN_HTML = """
         {% endif %}
 
         {% elif page == 'login' %}
-        <div class="col-md-4 mx-auto mt-5">
-            <div class="hero-section text-center p-5 shadow">
-                <i class="fa-lock-open fa-3x text-danger mb-4"></i>
-                <h3 class="fw-bold mb-4">অ্যাডমিন প্যানেল</h3>
-                <form method="POST">
-                    <input type="text" name="u" class="form-control mb-3 rounded-pill p-3" placeholder="Username" required>
-                    <input type="password" name="p" class="form-control mb-4 rounded-pill p-3" placeholder="Password" required>
-                    <button class="btn btn-download w-100 py-3 shadow">Login</button>
-                </form>
-            </div>
+        <div class="col-md-4 mx-auto mt-5 hero-section text-center">
+            <h3 class="fw-bold mb-4">অ্যাডমিন লগইন</h3>
+            <form method="POST">
+                <input type="text" name="u" class="form-control mb-3 p-3 rounded-pill" placeholder="Username" required>
+                <input type="password" name="p" class="form-control mb-4 p-3 rounded-pill" placeholder="Password" required>
+                <button class="btn btn-download w-100 py-3">Login</button>
+            </form>
         </div>
 
         {% elif page == 'admin' %}
-        <div class="row mt-5">
-            <div class="col-md-4">
-                <div class="admin-sidebar text-center mb-4">
-                    <img src="https://ui-avatars.com/api/?name=Admin&background=random" class="rounded-circle mb-3" width="80">
-                    <h5 class="fw-bold">অ্যাডমিন ড্যাশবোর্ড</h5>
-                    <p class="small text-muted">সার্ভার স্ট্যাটাস: <span class="text-success fw-bold">Active</span></p>
-                    <hr>
-                    <a href="/logout" class="btn btn-outline-danger w-100 rounded-pill">Logout</a>
-                </div>
-            </div>
-            <div class="col-md-8">
-                <div class="hero-section p-4 shadow border-0 mt-0">
-                    <h5 class="fw-bold mb-4"><i class="fa-cookie-bite me-2 text-warning"></i>YouTube Cookies (আইপি ব্লক সমাধান)</h5>
-                    <form method="POST" action="/save_cookies">
-                        <textarea name="cookies" class="form-control mb-3" rows="10" placeholder="Paste Netscape format cookies here...">{{ current_user.yt_cookies or '' }}</textarea>
-                        <button class="btn btn-download px-5 shadow">Save Settings</button>
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="hero-section p-4 shadow border-0">
+                    <h4 class="fw-bold mb-4 text-danger"><i class="fa-tools me-2"></i>Ad Management System</h4>
+                    <form method="POST" action="/save_ads">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Popunder Ad Code:</label>
+                                <textarea name="popunder" class="form-control" rows="4">{{ admin.ad_popunder or '' }}</textarea>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Social Bar Ad Code:</label>
+                                <textarea name="socialbar" class="form-control" rows="4">{{ admin.ad_socialbar or '' }}</textarea>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Native Ad Code:</label>
+                                <textarea name="native" class="form-control" rows="4">{{ admin.ad_native or '' }}</textarea>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="fw-bold">Banner Ad Code:</label>
+                                <textarea name="banner" class="form-control" rows="4">{{ admin.ad_banner or '' }}</textarea>
+                            </div>
+                            <div class="col-md-8 mb-3">
+                                <label class="fw-bold">Direct Link URL:</label>
+                                <input type="text" name="direct_url" class="form-control" value="{{ admin.ad_direct_link or '' }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="fw-bold">Direct Link Count:</label>
+                                <input type="number" name="direct_count" class="form-control" value="{{ admin.ad_direct_count or 0 }}">
+                            </div>
+                        </div>
+                        <hr>
+                        <h5 class="fw-bold mt-4">YouTube Cookies</h5>
+                        <textarea name="cookies" class="form-control mb-3" rows="5">{{ admin.yt_cookies or '' }}</textarea>
+                        <button class="btn btn-download px-5 shadow">Save All Settings</button>
                     </form>
-                    <div class="mt-4 alert alert-warning small">
-                        <strong>কিভাবে করবেন?</strong> ব্রাউজারে 'Get cookies.txt' এক্সটেনশন ব্যবহার করে ইউটিউবের কুকিজ কপি করে এখানে পেস্ট করুন। এতে ইউটিউব আপনার সার্ভার ব্লক করতে পারবে না।
-                    </div>
                 </div>
             </div>
         </div>
         {% endif %}
     </div>
 
-    <footer class="text-center py-5 text-muted mt-5">
-        <p>&copy; 2025 YouTube Downloader Pro | All Rights Reserved</p>
-    </footer>
+    <script>
+        let clickCount = 0;
+        const maxAds = {% if admin %}{{ admin.ad_direct_count or 0 }}{% else %}0{% endif %};
+        const directLink = "{% if admin %}{{ admin.ad_direct_link or '' }}{% endif %}";
+
+        function handleDownload(videoUrl) {
+            if (clickCount < maxAds && directLink !== "") {
+                clickCount++;
+                window.open(directLink, '_blank');
+            } else {
+                window.location.href = videoUrl;
+            }
+        }
+    </script>
 </body>
 </html>
 """
 
-# --- রাউটস এবং লজিক ---
-
 @app.route('/', methods=['GET', 'POST'])
 def index():
+    admin = AdminUser.query.filter_by(username='admin').first()
     video = None
     if request.method == 'POST':
         video = fetch_video_data(request.form.get('url'))
-        if not video:
-            flash("দুঃখিত! ভিডিওর তথ্য পাওয়া যায়নি। সঠিক ইউটিউব লিংক ব্যবহার করুন।")
-    return render_template_string(MAIN_HTML, page='home', video=video)
+        if not video: flash("Error fetching video data!")
+    return render_template_string(MAIN_HTML, page='home', video=video, admin=admin)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    admin = AdminUser.query.filter_by(username='admin').first()
     if request.method == 'POST':
-        admin = AdminUser.query.filter_by(username=request.form['u']).first()
-        if admin and admin.password == request.form['p']:
-            login_user(admin)
+        target = AdminUser.query.filter_by(username=request.form['u']).first()
+        if target and target.password == request.form['p']:
+            login_user(target)
             return redirect(url_for('admin'))
-        flash("ভুল ইউজার বা পাসওয়ার্ড!")
-    return render_template_string(MAIN_HTML, page='login')
+        flash("Invalid login!")
+    return render_template_string(MAIN_HTML, page='login', admin=admin)
 
 @app.route('/admin')
 @login_required
 def admin():
-    return render_template_string(MAIN_HTML, page='admin')
+    return render_template_string(MAIN_HTML, page='admin', admin=current_user)
 
-@app.route('/save_cookies', methods=['POST'])
+@app.route('/save_ads', methods=['POST'])
 @login_required
-def save_cookies():
+def save_ads():
+    current_user.ad_popunder = request.form.get('popunder')
+    current_user.ad_socialbar = request.form.get('socialbar')
+    current_user.ad_native = request.form.get('native')
+    current_user.ad_banner = request.form.get('banner')
+    current_user.ad_direct_link = request.form.get('direct_url')
+    current_user.ad_direct_count = int(request.form.get('direct_count', 0))
     current_user.yt_cookies = request.form.get('cookies')
     db.session.commit()
-    flash("সেটিংস সফলভাবে আপডেট হয়েছে!")
+    flash("Settings updated!")
     return redirect(url_for('admin'))
 
 @app.route('/logout')
 def logout():
-    logout_user()
-    return redirect(url_for('index'))
+    logout_user(); return redirect(url_for('index'))
 
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-        # ডিফল্ট অ্যাডমিন একাউন্ট (যদি না থাকে)
         if not AdminUser.query.filter_by(username='admin').first():
             db.session.add(AdminUser(username='admin', password='admin123'))
             db.session.commit()
-    
-    # Keep-Alive থ্রেড চালু
     threading.Thread(target=keep_web_alive, daemon=True).start()
-    
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
