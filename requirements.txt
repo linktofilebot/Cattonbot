@@ -1,6 +1,6 @@
-python-telegram-bot==20.3
-replicate
-python-dotenv
 flask
+flask-sqlalchemy
+flask-login
+yt-dlp
 requests
-moviepy==1.0.3
+gunicorn
