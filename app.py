@@ -4,21 +4,28 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 
+# --- অ্যাপ এবং ডাটাবেস সেটআপ ---
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'pro-key-2025')
-MONGO_URI = os.environ.get('MONGO_URI')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'premium-yt-2026-fixed')
 
-# Admin Settings (Render Environment থেকে আসবে)
+# রেন্ডার এনভায়রনমেন্ট থেকে ভেরিয়েবল নেওয়া
+MONGO_URI = os.environ.get('MONGO_URI')
 ADM_U = os.environ.get('ADMIN_USER', 'admin')
 ADM_P = os.environ.get('ADMIN_PASS', 'admin123')
 
 admin_col = None
+db_connected = False
+
+# ডাটাবেস কানেকশন লজিক
 if MONGO_URI:
     try:
         client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
-        db = client['yt_db']
-        admin_col = db['settings']
-    except Exception as e: print(f"DB Error: {e}")
+        db = client['yt_downloader_db']
+        admin_col = db['admin_settings']
+        client.admin.command('ping')
+        db_connected = True
+    except Exception as e:
+        print(f"Database Error: {e}")
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
@@ -27,75 +34,111 @@ class User(UserMixin):
     def __init__(self, data):
         self.id = str(data['_id'])
         self.username = data.get('username', ADM_U)
+        self.password = data.get('password', ADM_P)
+        self.yt_cookies = data.get('yt_cookies', '')
+        self.ad_popunder = data.get('ad_popunder', '')
+        self.ad_socialbar = data.get('ad_socialbar', '')
+        self.ad_native = data.get('ad_native', '')
+        self.ad_banner = data.get('ad_banner', '')
+        self.ad_direct_link = data.get('ad_direct_link', '')
+        self.ad_direct_count = data.get('ad_direct_count', 0)
 
 @login_manager.user_loader
 def load_user(user_id):
     if admin_col is None: return None
-    u_data = admin_col.find_one({"_id": ObjectId(user_id)})
-    return User(u_data) if u_data else None
+    user_data = admin_col.find_one({"_id": ObjectId(user_id)})
+    return User(user_data) if user_data else None
 
-def get_video(url):
-    if admin_col is None: return {"error": "DB Error"}
-    adm = admin_col.find_one({"username": ADM_U})
-    c_path = 'c.txt'
-    if adm and adm.get('yt_cookies'):
-        with open(c_path, 'w') as f: f.write(adm['yt_cookies'])
-    else: c_path = None
-    opts = {'format': 'best', 'quiet': True, 'nocheckcertificate': True, 'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'}
-    if c_path: opts['cookiefile'] = c_path
-    with yt_dlp.YoutubeDL(opts) as ydl:
+# ভিডিও ফেচিং ফাংশন
+def fetch_video(url):
+    if admin_col is None: return {"error": "Database not connected"}
+    admin = admin_col.find_one({"username": ADM_U})
+    
+    cookie_path = 'cookies.txt'
+    if admin and admin.get('yt_cookies'):
+        with open(cookie_path, 'w') as f: f.write(admin['yt_cookies'])
+    else: cookie_path = None
+
+    ydl_opts = {
+        'format': 'best', 'quiet': True, 'nocheckcertificate': True,
+        'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+    }
+    if cookie_path: ydl_opts['cookiefile'] = cookie_path
+
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         try:
             info = ydl.extract_info(url, download=False)
-            formats = [{'ext': f.get('ext'), 'res': f.get('resolution') or f.get('format_note'), 'url': f.get('url'), 'size': round(f.get('filesize', 0)/(1024*1024),2) if f.get('filesize') else "N/A"} for f in info.get('formats', []) if f.get('vcodec') != 'none' and f.get('acodec') != 'none']
-            return {'title': info.get('title'), 'thumb': info.get('thumbnail'), 'formats': formats[::-1]}
+            formats = []
+            for f in info.get('formats', []):
+                if f.get('vcodec') != 'none' and f.get('acodec') != 'none':
+                    formats.append({
+                        'ext': f.get('ext'), 'res': f.get('resolution') or f.get('format_note'),
+                        'url': f.get('url'), 'size': round(f.get('filesize', 0)/(1024*1024),2) if f.get('filesize') else "N/A"
+                    })
+            return {
+                'title': info.get('title'), 'thumb': info.get('thumbnail'),
+                'duration': time.strftime('%M:%S', time.gmtime(info.get('duration') or 0)),
+                'views': "{:,}".format(info.get('view_count', 0)), 'formats': formats[::-1]
+            }
         except Exception as e: return {"error": str(e)}
 
-UI = """
+# --- প্রিমিয়াম UI ডিজাইন ---
+UI_HTML = """
 <!DOCTYPE html>
 <html lang="bn">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProTube Premium</title>
+    <title>ProTube Premium - Best YT Downloader</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    {% if admin %}{{ admin.ad_popunder|safe }}{{ admin.ad_socialbar|safe }}{% endif %}
+    {% if admin %}{{ admin.ad_popunder | safe }}{{ admin.ad_socialbar | safe }}{% endif %}
     <style>
-        body { background: #0b0e14; color: #fff; font-family: sans-serif; min-height: 100vh; }
-        .glass { background: rgba(255,255,255,0.08); backdrop-filter: blur(15px); border-radius: 20px; padding: 25px; border: 1px solid rgba(255,255,255,0.1); }
-        .btn-p { background: linear-gradient(90deg, #ff0050, #ff0081); border: none; color: #fff; border-radius: 50px; padding: 10px 30px; font-weight: 600; }
-        .f-item { background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 10px; padding: 15px; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: #fff; border: 1px solid rgba(255,255,255,0.1); transition: 0.3s; }
-        .f-item:hover { border-color: #ff0050; transform: translateX(5px); color: #ff0050; }
+        body { background: #0b0e14; color: white; font-family: sans-serif; min-height: 100vh; }
+        .glass { background: rgba(255, 255, 255, 0.95); color: #1a1a2e; border-radius: 20px; padding: 30px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); }
+        .btn-premium { background: linear-gradient(45deg, #f093fb, #f5576c); border: none; color: white; border-radius: 50px; padding: 12px 30px; font-weight: bold; transition: 0.3s; }
+        .btn-premium:hover { transform: scale(1.05); }
+        .format-card { background: #f8f9fa; border-radius: 12px; margin-bottom: 10px; padding: 15px; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: #333; border: 1px solid #ddd; }
+        .navbar { background: rgba(0,0,0,0.3); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark shadow"><div class="container"><a class="navbar-brand fw-bold" href="/">🚀 PROTUBE <small class="badge bg-danger">PREMIUM</small></a>
-    {% if current_user.is_authenticated %}<a href="/admin" class="btn btn-sm btn-outline-light rounded-pill px-3">Dashboard</a>{% endif %}</div></nav>
+    <nav class="navbar navbar-dark sticky-top shadow">
+        <div class="container"><a class="navbar-brand fw-bold" href="/">🚀 PROTUBE <small class="badge bg-danger">PREMIUM</small></a>
+            {% if current_user.is_authenticated %}<a href="/admin" class="btn btn-sm btn-light rounded-pill px-3">Dashboard</a>{% endif %}
+        </div>
+    </nav>
     <div class="container mt-5">
-        <div class="text-center mb-4">{% if admin %}{{ admin.ad_banner|safe }}{% endif %}</div>
-        {% with msgs = get_flashed_messages() %}{% for m in msgs %}<div class="alert alert-info text-center rounded-pill">{{m}}</div>{% endfor %}{% endwith %}
+        {% if not db_status %}<div class="alert alert-danger text-center shadow">DATABASE NOT CONNECTED! MONGO_URI চেক করুন।</div>{% endif %}
+        <div class="text-center mb-4">{% if admin %}{{ admin.ad_banner | safe }}{% endif %}</div>
+        {% with msgs = get_flashed_messages() %}{% for m in msgs %}<div class="alert alert-warning text-center rounded-pill">{{m}}</div>{% endfor %}{% endwith %}
+        
         {% if page == 'home' %}
-        <div class="text-center py-5"><h1 class="fw-bold display-4">High-Speed Downloader</h1><div class="col-lg-8 mx-auto mt-4 glass">
-            <form method="POST" class="d-flex gap-2"><input type="text" name="url" class="form-control bg-transparent text-white rounded-pill border-secondary" placeholder="Paste Video Link..." required><button class="btn btn-p">Analyze</button></form></div></div>
-        {% if video %}{% if video.error %}<div class="alert alert-danger glass border-0 mt-4 text-center">Bot Error! Admin Panel-এ Cookies দিন।</div>
-        {% else %}<div class="glass mt-5 col-lg-11 mx-auto"><div class="row g-4"><div class="col-md-5"><img src="{{ video.thumb }}" class="img-fluid rounded-4 w-100"></div>
-        <div class="col-md-7"><h3>{{ video.title }}</h3><div class="mb-3">{% if admin %}{{ admin.ad_native|safe }}{% endif %}</div>
-        <div style="max-height:350px; overflow-y:auto; padding-right:10px;">{% for f in video.formats[:10] %}
-        <a href="javascript:void(0)" onclick="hDl('{{ f.url }}')" class="f-item"><span><i class="fa fa-play me-2"></i><b>{{ f.res }}</b></span><span class="badge bg-danger rounded-pill">{{ f.size }} MB</span></a>{% endfor %}</div></div></div></div>{% endif %}{% endif %}
+        <div class="text-center py-5"><h1 class="fw-bold display-4 mb-3">Downloader Pro</h1>
+            <div class="col-lg-8 mx-auto"><form method="POST" class="input-group rounded-pill overflow-hidden shadow-lg bg-white">
+                <input type="text" name="url" class="form-control border-0 p-3" placeholder="লিংক এখানে পেস্ট করুন..." required style="color:#222">
+                <button class="btn btn-premium px-5">DOWNLOAD</button></form></div></div>
+        {% if video %}{% if video.error %}<div class="alert alert-danger glass border-0 mt-4 text-center">Bot detected! Admin Panel-এ Cookies দিন।</div>
+        {% else %}<div class="glass mt-5 col-lg-10 mx-auto text-start"><div class="row g-4"><div class="col-md-5"><img src="{{ video.thumb }}" class="img-fluid rounded-4 shadow w-100"></div>
+        <div class="col-md-7"><h3>{{ video.title }}</h3><div class="mb-3">{% if admin %}{{ admin.ad_native | safe }}{% endif %}</div>
+        <div class="formats" style="max-height:300px; overflow-y:auto;">{% for f in video.formats[:8] %}
+        <a href="javascript:void(0)" onclick="handleDownload('{{ f.url }}')" class="format-card"><b>{{ f.res }}</b><span class="badge bg-success rounded-pill">{{ f.size }} MB</span></a>{% endfor %}</div></div></div></div>{% endif %}{% endif %}
+        
         {% elif page == 'login' %}
-        <div class="col-md-4 mx-auto mt-5 glass text-center"><h2>Admin Login</h2><form method="POST">
-            <input type="text" name="u" class="form-control bg-dark text-white mb-3" placeholder="User" required><input type="password" name="p" class="form-control bg-dark text-white mb-4" placeholder="Pass" required><button class="btn btn-p w-100">Login</button></form></div>
+        <div class="col-md-4 mx-auto mt-5 glass text-center"><h3>Admin Login</h3><form method="POST">
+            <input type="text" name="u" class="form-control mb-3" placeholder="Username" required><input type="password" name="p" class="form-control mb-3" placeholder="Password" required><button class="btn btn-premium w-100">LOGIN</button></form></div>
+        
         {% elif page == 'admin' %}
-        <div class="glass mt-4"><h4>Admin Control Panel</h4><form method="POST" action="/save_settings"><div class="row g-3">
-            <div class="col-md-6"><label class="small">Popunder</label><textarea name="pop" class="form-control bg-dark text-white">{{ admin.ad_popunder }}</textarea></div>
-            <div class="col-md-6"><label class="small">SocialBar</label><textarea name="soc" class="form-control bg-dark text-white">{{ admin.ad_socialbar }}</textarea></div>
-            <div class="col-md-6"><label class="small">Native</label><textarea name="nat" class="form-control bg-dark text-white">{{ admin.ad_native }}</textarea></div>
-            <div class="col-md-6"><label class="small">Banner</label><textarea name="ban" class="form-control bg-dark text-white">{{ admin.ad_banner }}</textarea></div>
-            <div class="col-md-8"><label class="small">DirectLink Ad URL</label><input type="text" name="d_url" class="form-control bg-dark text-white" value="{{ admin.ad_direct_link }}"></div>
-            <div class="col-md-4"><label class="small">Ad Count (Clicks)</label><input type="number" name="d_count" class="form-control bg-dark text-white" value="{{ admin.ad_direct_count }}"></div>
-            <div class="col-12"><label class="small text-danger fw-bold">YouTube Cookies (Netscape)</label><textarea name="cookies" class="form-control bg-dark text-white" rows="4">{{ admin.yt_cookies }}</textarea></div>
-            </div><button class="btn btn-p w-100 mt-4">Deploy All Settings</button></form><div class="text-center mt-3"><a href="/logout" class="text-danger small">Logout</a></div></div>{% endif %}
+        <div class="glass mt-4 text-start"><h4>Admin Control Panel</h4><form method="POST" action="/save_settings"><div class="row">
+            <div class="col-md-6 mb-2"><label class="small fw-bold">Popunder Code</label><textarea name="pop" class="form-control small">{{ admin.ad_popunder }}</textarea></div>
+            <div class="col-md-6 mb-2"><label class="small fw-bold">Social Bar Code</label><textarea name="soc" class="form-control small">{{ admin.ad_socialbar }}</textarea></div>
+            <div class="col-md-6 mb-2"><label class="small fw-bold">Native Code</label><textarea name="nat" class="form-control small">{{ admin.ad_native }}</textarea></div>
+            <div class="col-md-6 mb-2"><label class="small fw-bold">Banner Code</label><textarea name="ban" class="form-control small">{{ admin.ad_banner }}</textarea></div>
+            <div class="col-md-8 mb-2"><label class="small fw-bold">Direct Link Ad URL</label><input type="text" name="d_url" class="form-control" value="{{ admin.ad_direct_link }}"></div>
+            <div class="col-md-4 mb-2"><label class="small fw-bold">Clicks Limit</label><input type="number" name="d_count" class="form-control" value="{{ admin.ad_direct_count }}"></div></div><hr>
+            <label class="fw-bold small text-danger">YouTube Cookies (Netscape Format)</label><textarea name="cookies" class="form-control mb-3" rows="3">{{ admin.yt_cookies }}</textarea>
+            <button class="btn btn-premium w-100 py-2 shadow">SAVE ALL CONFIG</button></form><div class="text-center mt-3"><a href="/logout" class="text-danger small">Logout</a></div></div>{% endif %}
     </div><script>let c=0; const m={{ admin.ad_direct_count if admin else 0 }}, l="{{ admin.ad_direct_link if admin else '' }}";
-    function hDl(u){if(c<m && l!==""){c++; window.open(l,'_blank');}else{window.location.href=u;}}</script>
+    function handleDownload(u){if(c<m && l!==""){c++; window.open(l,'_blank');}else{window.location.href=u;}}</script>
 </body></html>
 """
 
@@ -103,8 +146,8 @@ UI = """
 def index():
     admin = admin_col.find_one({"username": ADM_U}) if admin_col else None
     video = None
-    if request.method == 'POST': video = get_video(request.form.get('url'))
-    return render_template_string(UI, page='home', video=video, admin=admin)
+    if request.method == 'POST': video = fetch_video(request.form.get('url'))
+    return render_template_string(UI_HTML, page='home', video=video, admin=admin, db_status=db_connected)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -113,12 +156,12 @@ def login():
         if u == ADM_U and p == ADM_P:
             user_data = admin_col.find_one({"username": ADM_U})
             login_user(User(user_data)); return redirect(url_for('admin'))
-        flash("Wrong Credentials!")
-    return render_template_string(UI, page='login', admin=None)
+        flash("Invalid Credentials!")
+    return render_template_string(UI_HTML, page='login', admin=None, db_status=db_connected)
 
 @app.route('/admin')
 @login_required
-def admin(): return render_template_string(UI, page='admin', admin=admin_col.find_one({"username": ADM_U}))
+def admin(): return render_template_string(UI_HTML, page='admin', admin=admin_col.find_one({"username": ADM_U}), db_status=db_connected)
 
 @app.route('/save_settings', methods=['POST'])
 @login_required
