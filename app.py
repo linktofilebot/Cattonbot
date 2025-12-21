@@ -4,17 +4,17 @@ from flask_login import LoginManager, UserMixin, login_user, login_required, log
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 
-# --- APP CONFIG ---
+# --- অ্যাপ এবং ডাটাবেস সেটআপ ---
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'premium-key-2025-final')
-MONGO_URI = os.environ.get('MONGO_URI')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'premium-yt-downloader-2025-final-v1')
 
-# Admin Settings
+# Render Environment Variables
+MONGO_URI = os.environ.get('MONGO_URI')
 ADM_U = os.environ.get('ADMIN_USER', 'admin')
 ADM_P = os.environ.get('ADMIN_PASS', 'admin123')
 
 admin_col = None
-db_status = False
+db_connected = False
 
 if MONGO_URI:
     try:
@@ -22,15 +22,18 @@ if MONGO_URI:
         db = client['yt_downloader_db']
         admin_col = db['admin_settings']
         client.admin.command('ping')
-        db_status = True
-    except Exception as e: print(f"DB Error: {e}")
+        db_connected = True
+        print("Connected to MongoDB!")
+    except Exception as e:
+        print(f"Database Connection Failed: {e}")
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+# --- ইউজার ক্লাস (ক্রাশ প্রতিরোধক) ---
 class User(UserMixin):
     def __init__(self, data):
-        self.id = str(data['_id'])
+        self.id = str(data.get('_id', '0'))
         self.username = data.get('username', ADM_U)
         self.yt_cookies = data.get('yt_cookies', '')
         self.ad_popunder = data.get('ad_popunder', '')
@@ -42,11 +45,15 @@ class User(UserMixin):
 
 @login_manager.user_loader
 def load_user(user_id):
-    if admin_col is None: return None
-    u_data = admin_col.find_one({"_id": ObjectId(user_id)})
-    return User(u_data) if u_data else None
+    if admin_col is not None:
+        try:
+            u_data = admin_col.find_one({"_id": ObjectId(user_id)})
+            if u_data: return User(u_data)
+        except: return None
+    return None
 
-def get_video(url):
+# --- ভিডিও ফেচিং লজিক ---
+def fetch_video(url):
     if admin_col is None: return {"error": "Database Disconnected"}
     adm = admin_col.find_one({"username": ADM_U})
     c_file = 'cookies.txt'
@@ -65,7 +72,7 @@ def get_video(url):
             return {'title': info.get('title'), 'thumb': info.get('thumbnail'), 'formats': formats[::-1]}
         except Exception as e: return {"error": str(e)}
 
-# --- PREMIUM UI ---
+# --- প্রিমিয়াম ডিজাইন (UI) ---
 UI = """
 <!DOCTYPE html>
 <html lang="bn">
@@ -78,77 +85,90 @@ UI = """
     <style>
         body { background: #0b0e14; color: #fff; font-family: sans-serif; min-height: 100vh; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(15px); border-radius: 20px; padding: 25px; border: 1px solid rgba(255, 255, 255, 0.1); }
-        .btn-p { background: linear-gradient(90deg, #ff0050, #ff0081); border: none; color: #fff; border-radius: 50px; padding: 12px 30px; font-weight: 600; }
-        .f-item { background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 10px; padding: 15px; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: #fff; border: 1px solid rgba(255,255,255,0.1); }
-        .f-item:hover { border-color: #ff0050; transform: translateX(5px); transition: 0.3s; }
+        .btn-p { background: linear-gradient(90deg, #ff0050, #ff0081); border: none; color: #fff; border-radius: 50px; padding: 10px 30px; font-weight: 600; }
+        .f-item { background: rgba(255,255,255,0.05); border-radius: 12px; margin-bottom: 10px; padding: 15px; display: flex; justify-content: space-between; align-items: center; text-decoration: none; color: #fff; border: 1px solid rgba(255,255,255,0.1); transition: 0.3s; }
+        .f-item:hover { border-color: #ff0050; transform: translateX(5px); }
         .navbar { background: rgba(0,0,0,0.5); backdrop-filter: blur(10px); }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-dark sticky-top shadow"><div class="container"><a class="navbar-brand fw-bold" href="/">🚀 PRO<span style="color:#ff0050">TUBE</span></a>
-    {% if current_user.is_authenticated %}<a href="/admin" class="btn btn-sm btn-outline-light rounded-pill px-3">Dashboard</a>{% else %}<a href="/login" class="text-white-50 small text-decoration-none">Staff</a>{% endif %}</div></nav>
+    {% if current_user.is_authenticated %}<a href="/admin" class="btn btn-sm btn-outline-light rounded-pill px-3">Dashboard</a>{% else %}<a href="/login" class="text-white-50 small text-decoration-none">Login</a>{% endif %}</div></nav>
     <div class="container mt-5">
         <div class="text-center mb-4">{% if admin %}{{ admin.ad_banner|safe if admin.ad_banner }}{% endif %}</div>
         {% with msgs = get_flashed_messages() %}{% for m in msgs %}<div class="alert alert-info text-center rounded-pill">{{m}}</div>{% endfor %}{% endwith %}
         {% if page == 'home' %}
-        <div class="text-center py-5"><h1 class="fw-bold display-4">High-Speed Downloader</h1><div class="col-lg-8 mx-auto mt-4 glass">
+        <div class="text-center py-5"><h1 class="fw-bold display-4">Premium Downloader</h1><div class="col-lg-8 mx-auto mt-4 glass">
             <form method="POST" class="d-flex gap-2"><input type="text" name="url" class="form-control bg-transparent text-white rounded-pill border-secondary p-3 shadow-none" placeholder="Paste Video Link..." required><button class="btn btn-p px-4">Analyze</button></form></div></div>
-        {% if video %}{% if video.error %}<div class="alert alert-danger glass border-0 mt-4 text-center"><b>Bot Error!</b> অ্যাডমিন প্যানেলে কুকিজ আপডেট করুন।</div>
+        {% if video %}{% if video.error %}<div class="alert alert-danger glass border-0 mt-4 text-center"><b>YouTube Error!</b> অ্যাডমিন প্যানেলে কুকিজ দিন।</div>
         {% else %}<div class="glass mt-5 col-lg-11 mx-auto shadow-lg"><div class="row g-4"><div class="col-md-5"><img src="{{ video.thumb }}" class="img-fluid rounded-4 shadow w-100"></div>
         <div class="col-md-7"><h3>{{ video.title }}</h3><div class="mb-3">{% if admin %}{{ admin.ad_native|safe if admin.ad_native }}{% endif %}</div>
-        <div style="max-height:350px; overflow-y:auto; padding-right:10px;">{% for f in video.formats[:10] %}
-        <a href="javascript:void(0)" onclick="hDl('{{ f.url }}')" class="f-item"><span><i class="fa fa-play text-danger me-2"></i><b>{{ f.res }}</b> ({{f.ext|upper}})</span><span class="badge bg-danger rounded-pill">{{ f.size }} MB</span></a>{% endfor %}</div></div></div></div>{% endif %}{% endif %}
+        <div style="max-height:350px; overflow-y:auto;">{% for f in video.formats[:10] %}
+        <a href="javascript:void(0)" onclick="hDl('{{ f.url }}')" class="f-item"><span><i class="fa fa-play text-danger me-2"></i><b>{{ f.res }}</b></span><span class="badge bg-danger rounded-pill">{{ f.size }} MB</span></a>{% endfor %}</div></div></div></div>{% endif %}{% endif %}
         {% elif page == 'login' %}
-        <div class="col-md-4 mx-auto mt-5 glass text-center"><h2>Login</h2><form method="POST" action="/login">
-            <input type="text" name="u" class="form-control bg-dark text-white mb-3" placeholder="User" required><input type="password" name="p" class="form-control bg-dark text-white mb-4" placeholder="Pass" required><button class="btn btn-p w-100 shadow">Login</button></form></div>
+        <div class="col-md-4 mx-auto mt-5 glass text-center"><h2>Admin Login</h2><form method="POST" action="/login">
+            <input type="text" name="u" class="form-control bg-dark text-white mb-3" placeholder="Username" required autocomplete="off">
+            <input type="password" name="p" class="form-control bg-dark text-white mb-4" placeholder="Password" required>
+            <button class="btn btn-p w-100 shadow">Login</button></form></div>
         {% elif page == 'admin' %}
-        <div class="glass mt-4"><h3>Admin Control</h3><form method="POST" action="/save_settings"><div class="row g-3">
-            <div class="col-md-6"><label class="small fw-bold">Popunder Code</label><textarea name="pop" class="form-control bg-dark text-white">{{ admin.ad_popunder }}</textarea></div>
-            <div class="col-md-6"><label class="small fw-bold">SocialBar Code</label><textarea name="soc" class="form-control bg-dark text-white">{{ admin.ad_socialbar }}</textarea></div>
-            <div class="col-md-6"><label class="small fw-bold">Native Ad Code</label><textarea name="nat" class="form-control bg-dark text-white">{{ admin.ad_native }}</textarea></div>
-            <div class="col-md-6"><label class="small fw-bold">Banner Ad Code</label><textarea name="ban" class="form-control bg-dark text-white">{{ admin.ad_banner }}</textarea></div>
-            <div class="col-md-8"><label class="small fw-bold">Direct Link URL</label><input type="text" name="d_url" class="form-control bg-dark text-white" value="{{ admin.ad_direct_link }}"></div>
-            <div class="col-md-4"><label class="small fw-bold">Clicks Count</label><input type="number" name="d_count" class="form-control bg-dark text-white" value="{{ admin.ad_direct_count }}"></div>
-            <div class="col-12"><label class="small text-danger fw-bold">YouTube Netscape Cookies</label><textarea name="cookies" class="form-control bg-dark text-white" rows="5">{{ admin.yt_cookies }}</textarea></div>
-            </div><button class="btn btn-p w-100 mt-4 shadow py-2">Save All Settings</button></form><div class="text-center mt-3"><a href="/logout" class="text-danger small">Logout</a></div></div>{% endif %}
+        <div class="glass mt-4 text-start"><div class="d-flex justify-content-between mb-4"><h4>Admin Control</h4><a href="/logout" class="text-danger">Logout</a></div>
+            <form method="POST" action="/save_settings"><div class="row g-3">
+                <div class="col-md-6"><label class="small fw-bold">Popunder Code</label><textarea name="pop" class="form-control bg-dark text-white">{{ admin.ad_popunder }}</textarea></div>
+                <div class="col-md-6"><label class="small fw-bold">SocialBar Code</label><textarea name="soc" class="form-control bg-dark text-white">{{ admin.ad_socialbar }}</textarea></div>
+                <div class="col-md-6"><label class="small fw-bold">Native Ad Code</label><textarea name="nat" class="form-control bg-dark text-white">{{ admin.ad_native }}</textarea></div>
+                <div class="col-md-6"><label class="small fw-bold">Banner Ad Code</label><textarea name="ban" class="form-control bg-dark text-white">{{ admin.ad_banner }}</textarea></div>
+                <div class="col-md-8"><label class="small fw-bold">Direct Link URL</label><input type="text" name="d_url" class="form-control bg-dark text-white" value="{{ admin.ad_direct_link }}"></div>
+                <div class="col-md-4"><label class="small fw-bold">Ad Clicks</label><input type="number" name="d_count" class="form-control bg-dark text-white" value="{{ admin.ad_direct_count }}"></div>
+                <div class="col-12"><label class="small text-danger fw-bold">YouTube Cookies (Netscape)</label><textarea name="cookies" class="form-control bg-dark text-white" rows="5">{{ admin.yt_cookies }}</textarea></div>
+            </div><button class="btn btn-p w-100 mt-4 shadow py-2">Save All Settings</button></form></div>{% endif %}
     </div><script>let c=0; const m={{ admin.ad_direct_count if admin and admin.ad_direct_count else 0 }}, l="{{ admin.ad_direct_link if admin and admin.ad_direct_link else '' }}";
     function hDl(u){if(c<m && l!==""){c++; window.open(l,'_blank');}else{window.location.href=u;}}</script>
 </body></html>
 """
 
+# --- রাউটস ---
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     admin = admin_col.find_one({"username": ADM_U}) if admin_col is not None else None
     video = None
-    if request.method == 'POST': video = get_video(request.form.get('url'))
+    if request.method == 'POST': video = fetch_video(request.form.get('url'))
     return render_template_string(UI, page='home', video=video, admin=admin)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         u, p = request.form.get('u'), request.form.get('p')
+        # এনভায়রনমেন্ট ভেরিয়েবল এবং ডাটাবেস উভয়ই চেক করবে
         if u == ADM_U and p == ADM_P:
-            user_data = admin_col.find_one({"username": ADM_U})
-            login_user(User(user_data)); return redirect(url_for('admin'))
+            if admin_col is not None:
+                user_data = admin_col.find_one({"username": ADM_U})
+                if user_data:
+                    login_user(User(user_data))
+                    return redirect(url_for('admin'))
         flash("Invalid Credentials!")
     return render_template_string(UI, page='login', admin=None)
 
 @app.route('/admin')
 @login_required
 def admin():
-    admin_data = admin_col.find_one({"username": ADM_U})
+    admin_data = admin_col.find_one({"username": ADM_U}) if admin_col is not None else None
     return render_template_string(UI, page='admin', admin=admin_data)
 
 @app.route('/save_settings', methods=['POST'])
 @login_required
 def save_settings():
-    admin_col.update_one({"username": ADM_U}, {"$set": {"ad_popunder": request.form.get('pop'), "ad_socialbar": request.form.get('soc'), "ad_native": request.form.get('nat'), "ad_banner": request.form.get('ban'), "ad_direct_link": request.form.get('d_url'), "ad_direct_count": int(request.form.get('d_count', 0)), "yt_cookies": request.form.get('cookies')}})
-    flash("Settings Saved!"); return redirect(url_for('admin'))
+    if admin_col is not None:
+        admin_col.update_one({"username": ADM_U}, {"$set": {"ad_popunder": request.form.get('pop'), "ad_socialbar": request.form.get('soc'), "ad_native": request.form.get('nat'), "ad_banner": request.form.get('ban'), "ad_direct_link": request.form.get('d_url'), "ad_direct_count": int(request.form.get('d_count', 0)), "yt_cookies": request.form.get('cookies')}})
+        flash("Settings Saved!"); return redirect(url_for('admin'))
+    return "DB Error"
 
 @app.route('/logout')
 def logout(): logout_user(); return redirect(url_for('index'))
 
 if __name__ == '__main__':
-    if admin_col is not None and admin_col.count_documents({"username": ADM_U}) == 0:
-        admin_col.insert_one({"username": ADM_U, "password": ADM_P, "ad_direct_count": 0})
+    # প্রথমবার রান হওয়ার সময় অটোমেটিক অ্যাডমিন তৈরি বা আপডেট
+    if admin_col is not None:
+        if admin_col.count_documents({"username": ADM_U}) == 0:
+            admin_col.insert_one({"username": ADM_U, "password": ADM_P, "ad_direct_count": 0})
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
