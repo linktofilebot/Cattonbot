@@ -1,6 +1,7 @@
 flask
-flask-sqlalchemy
 flask-login
+pymongo
+certifi
 yt-dlp
 requests
 gunicorn
