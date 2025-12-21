@@ -1,105 +1,105 @@
 import os
 import logging
+import threading
 import asyncio
-import requests
+from flask import Flask
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 import replicate
-from moviepy.editor import VideoFileClip, AudioFileClip
 from dotenv import load_dotenv
 
-# এনভায়রনমেন্ট ভেরিয়েবল লোড
+# এনভায়রনমেন্ট ভেরিয়েবল লোড করা
 load_dotenv()
 
-# Render-এর Environment Variables থেকে ডেটা নেওয়া
+# ১. রেন্ডারের পোর্টের জন্য Flask সার্ভার (এটি রেন্ডারকে বলবে আপনার অ্যাপ সচল আছে)
+server = Flask(__name__)
+
+@server.route('/')
+def health_check():
+    return "Bot is running and healthy!", 200
+
+def run_flask():
+    # Render অটোমেটিক PORT এনভায়রনমেন্ট ভেরিয়েবল দেয়, না থাকলে ৮০৮০ ব্যবহার হবে
+    port = int(os.environ.get("PORT", 8080))
+    server.run(host='0.0.0.0', port=port)
+
+# ২. কনফিগারেশন (Render Environment Variables থেকে আসবে)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
-
-# Replicate API সেটআপ
 os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_TOKEN
 
 # লগিং সেটআপ
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
+# ৩. বটের কাজ শুরু
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("হ্যালো! আমাকে একটি কার্টুন ভিডিও পাঠান। আমি অটোমেটিক সেটিকে এনিমে এবং ভয়েস চেঞ্জ করে দেব।")
+    await update.message.reply_text("হ্যালো! আমাকে একটি কার্টুন ভিডিও পাঠান। আমি অটোমেটিক সেটিকে এনিমে ভিডিও এবং ভিন্ন ভিন্ন ভয়েসে রূপান্তর করে দেব।")
 
 async def process_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_video = update.message.video
-    chat_id = update.message.chat_id
-    
     if not user_video:
-        await update.message.reply_text("দয়া করে একটি ভিডিও ফাইল পাঠান।")
         return
 
-    status_msg = await update.message.reply_text("ভিডিওটি পেয়েছি। প্রসেসিং শুরু হচ্ছে... (২-৫ মিনিট সময় লাগতে পারে)")
-
-    # ফাইলের নাম ঠিক করা
-    input_video = f"input_{chat_id}.mp4"
-    audio_path = f"audio_{chat_id}.mp3"
+    status_msg = await update.message.reply_text("ভিডিও পেয়েছি! কাজ শুরু হচ্ছে... এতে কিছুক্ষণ সময় লাগবে।")
 
     try:
-        # ১. ভিডিও ডাউনলোড করা
+        # ভিডিও ফাইলের লিঙ্ক বের করা
         video_file = await context.bot.get_file(user_video.file_id)
         video_url = video_file.file_path
-        
-        # ২. ভিডিওকে এনিমে করা (Replicate API)
-        await status_msg.edit_text("ধাপ ১: ভিডিওকে এনিমে স্টাইলে রূপান্তর করা হচ্ছে...")
-        anime_video_url = replicate.run(
+
+        # ধাপ ১: ভিডিও টু এনিমে (Replicate)
+        await status_msg.edit_text("ধাপ ১: ভিডিওর দৃশ্যগুলোকে এনিমে স্টাইলে রূপান্তর করা হচ্ছে...")
+        anime_video_output = replicate.run(
             "lucataco/animate-diff:be05cde2",
             input={
                 "video": video_url,
-                "prompt": "masterpiece, best quality, anime style, high resolution, vibrant colors",
-                "n_prompt": "bad quality, blurry, low resolution, distorted faces"
+                "prompt": "masterpiece, best quality, anime style, high resolution",
+                "n_prompt": "low quality, blurry, distorted"
             }
         )
 
-        # ৩. অডিও এবং স্পিকার ডিটেকশন + ভয়েস চেঞ্জ
-        # এখানে আমরা এমন একটি মডেল ব্যবহার করছি যা অডিও এনালাইজ করে ভয়েস চেঞ্জ করবে
-        await status_msg.edit_text("ধাপ ২: ক্যারেক্টার অনুযায়ী ভয়েস পরিবর্তন করা হচ্ছে...")
-        
-        # RVC V2 ব্যবহার করে ভয়েস পরিবর্তন
-        # এখানে 'model_name' হিসেবে একটি মাল্টি-ভয়েস এনিমে মডেল ব্যবহার করা হয়েছে
-        final_video_url = replicate.run(
+        # ধাপ ২: অটোমেটেড ভয়েস চেঞ্জ (RVC)
+        # এখানে 'Anime_Multi_Character_Mix' মডেলটি ব্যবহার করা হয়েছে যা ক্যারেক্টার অনুযায়ী ভয়েস মডুলেট করে
+        await status_msg.edit_text("ধাপ ২: প্রতিটি ক্যারেক্টারের ভয়েস আলাদা করা এবং পরিবর্তন করা হচ্ছে...")
+        final_video_output = replicate.run(
             "zsxkib/rvc-v2:4003ec7b",
             input={
-                "audio_input": anime_video_url,
-                "model_name": "Anime_Multi_Character_Mix", 
+                "audio_input": anime_video_output,
+                "model_name": "Anime_Multi_Character_Mix",
                 "index_rate": 0.5,
-                "pitch": 0, # ০ মানে অরিজিনাল পিচ বজায় থাকবে
-                "f0_method": "rmvpe" # উন্নত ভয়েস কোয়ালিটির জন্য
+                "pitch": 0,
+                "f0_method": "rmvpe"
             }
         )
 
         # ৪. ইউজারকে ফাইনাল ভিডিও পাঠানো
-        await status_msg.edit_text("সব কাজ শেষ! ভিডিও পাঠানো হচ্ছে...")
+        await status_msg.edit_text("সব কাজ শেষ! এখন ভিডিওটি আপলোড করছি...")
         await update.message.reply_video(
-            video=final_video_url, 
-            caption="✅ এনিমে এবং ভয়েস কনভার্ট সম্পন্ন হয়েছে!\nবটটি ভালো লাগলে শেয়ার করুন।"
+            video=final_video_output, 
+            caption="✅ আপনার এনিমে ভিডিও ক্যারেক্টার ভয়েস সহ তৈরি!"
         )
         await status_msg.delete()
 
     except Exception as e:
         logging.error(f"Error: {e}")
-        await update.message.reply_text(f"দুঃখিত, কোনো একটি কারিগরি সমস্যা হয়েছে। \nError: {str(e)}")
+        await update.message.reply_text(f"দুঃখিত, কোনো একটি সমস্যা হয়েছে। \nError: {str(e)}")
 
+# ৫. মেইন ফাংশন যা সব কিছু একসাথে চালু করবে
 if __name__ == '__main__':
-    # চেক করা টোকেন আছে কিনা
-    if not TELEGRAM_TOKEN or not REPLICATE_API_TOKEN:
-        print("Error: TELEGRAM_TOKEN বা REPLICATE_API_TOKEN পাওয়া যায়নি!")
+    # আলাদা থ্রেডে Flask সার্ভার চালু করা যেন Render পোর্ট ডিটেক্ট করতে পারে
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    # টেলিগ্রাম বট সেটআপ
+    if not TELEGRAM_TOKEN:
+        print("ভুল: TELEGRAM_TOKEN পাওয়া যায়নি!")
     else:
-        # বট স্টার্ট করা
         application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
         
         # হ্যান্ডলার যোগ করা
-        start_handler = MessageHandler(filters.COMMAND & filters.Regex('start'), start)
-        video_handler = MessageHandler(filters.VIDEO, process_video)
+        application.add_handler(MessageHandler(filters.COMMAND & filters.Regex('start'), start))
+        application.add_handler(MessageHandler(filters.VIDEO, process_video))
         
-        application.add_handler(start_handler)
-        application.add_handler(video_handler)
-        
-        print("বটটি সফলভাবে চালু হয়েছে এবং রেন্ডারে রান করার জন্য প্রস্তুত।")
+        print("বটটি এখন সচল এবং রেন্ডারে রান করার জন্য সম্পূর্ণ প্রস্তুত।")
         application.run_polling()
