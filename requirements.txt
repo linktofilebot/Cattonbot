@@ -1,6 +1,6 @@
 python-telegram-bot==20.3
 replicate
 python-dotenv
-moviepy==1.0.3
-requests
 flask
+requests
+moviepy==1.0.3
