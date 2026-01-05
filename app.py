@@ -17,7 +17,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "moviebox_ultra_premium_master_202
 # --- ডাটাবেস ও ক্লাউড সেটিংস ---
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb+srv://Demo270:Demo270@cluster0.ls1igsg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "7dc544d9253bccc3cfecc1c677f69819")
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8552345370:AAHt5CoK6nS_TAbUjtHR3-BOp_6jFMKnOrk")
 
 cloudinary.config( 
   cloud_name = os.environ.get("CLOUDINARY_NAME", "dck0nrnt2"), 
