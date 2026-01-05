@@ -1,12 +1,14 @@
 import os
 import requests
 import tempfile
+import threading
 from datetime import datetime
 from flask import Flask, render_template_string, request, redirect, url_for, session, jsonify
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 import cloudinary
 import cloudinary.uploader
+import telebot # টেলিগ্রাম বট লাইব্রেরি
 
 # --- অ্যাপ কনফিগারেশন ---
 app = Flask(__name__)
@@ -15,6 +17,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "moviebox_ultra_premium_master_202
 # --- ডাটাবেস ও ক্লাউড সেটিংস ---
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb+srv://Demo270:Demo270@cluster0.ls1igsg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "7dc544d9253bccc3cfecc1c677f69819")
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
 
 cloudinary.config( 
   cloud_name = os.environ.get("CLOUDINARY_NAME", "dck0nrnt2"), 
@@ -22,7 +25,9 @@ cloudinary.config(
   api_secret = os.environ.get("CLOUDINARY_API_SECRET", "a7y3o299JJqLfxmj9rLMK3hNbcg") 
 )
 
-# MongoDB কানেকশন ও কালেকশনস
+bot = telebot.TeleBot(BOT_TOKEN)
+
+# MongoDB কানেকশন
 try:
     client = MongoClient(MONGO_URI)
     db = client['moviebox_v5_db']
@@ -417,7 +422,7 @@ ADMIN_HTML = CSS + """
     <!-- ইপিসোড ম্যানেজমেন্ট (Edit/Delete) -->
     <div id="manageEpBox" class="sec-box">
         <h3>📂 Manage Episodes</h3>
-        <input type="text" id="epManageSch" placeholder="🔍 Search series to manage episodes..." onkeyup="findMSeries()" style="border:1px solid var(--main); margin-bottom:10px;">
+        <input type="text" id="epManageSch" placeholder="🔍 Search series..." onkeyup="findMSeries()" style="border:1px solid var(--main); margin-bottom:10px;">
         <select id="mSeries" onchange="loadEpisodes(this.value)">
             <option value="">Select Series to see episodes</option>
             {% for m in movies if m.type == 'series' %}<option value="{{ m._id|string }}">{{ m.title }}</option>{% endfor %}
@@ -425,25 +430,10 @@ ADMIN_HTML = CSS + """
         <div id="epList" style="margin-top:15px; border-top:1px solid #333;"></div>
     </div>
 
-    <!-- ইপিসোড এডিট ফর্ম -->
-    <div id="editEpBox" class="sec-box">
-        <h3>✏️ Edit Episode</h3>
-        <form id="editEpFrm">
-            <input type="hidden" name="id" id="ep_e_id">
-            <label>Season</label><input type="number" name="season" id="ep_e_s" required>
-            <label>Episode</label><input type="number" name="episode" id="ep_e_e" required>
-            <p style="font-size:12px; color:orange;">Keep blank to keep old video</p>
-            <input type="file" name="video_file" id="ep_e_f" accept="video/mp4">
-            <div class="progress-container" id="ep_e_pCont"><div class="progress-bar" id="ep_e_pBar">0%</div></div>
-            <button type="button" onclick="updateEpSubmit()" class="btn-main">UPDATE EPISODE</button>
-            <button type="button" onclick="openSec('manageEpBox')" class="btn-main" style="background:#444; margin-top:10px;">CANCEL</button>
-        </form>
-    </div>
-
     <!-- বাল্ক ডিলিট ও এডিট লিস্ট -->
     <div id="manageBox" class="sec-box">
         <h3>🎬 Bulk Action / Edit Content</h3>
-        <input type="text" id="bulkSearch" placeholder="🔍 Search content to edit/delete..." onkeyup="filterBulk()" style="border:1px solid var(--main); margin-bottom:15px;">
+        <input type="text" id="bulkSearch" placeholder="🔍 Search content..." onkeyup="filterBulk()" style="border:1px solid var(--main); margin-bottom:15px;">
         <form action="/bulk_delete" method="POST">
             <div id="bulkList" style="max-height: 500px; overflow-y: auto; border: 1px solid #333; padding: 10px;">
                 {% for m in movies %}
@@ -499,7 +489,6 @@ ADMIN_HTML = CSS + """
         }
     }
 
-    // Manage Episodes সেকশনের জন্য সার্চ ফাংশন
     function findMSeries() {
         let q = document.getElementById('epManageSch').value.toLowerCase();
         let sel = document.getElementById('mSeries');
@@ -509,7 +498,6 @@ ADMIN_HTML = CSS + """
         }
     }
 
-    // Bulk Action সেকশনের জন্য সার্চ ফাংশন
     function filterBulk() {
         let q = document.getElementById('bulkSearch').value.toLowerCase();
         let items = document.querySelectorAll('#bulkList .bulk-item');
@@ -528,35 +516,9 @@ ADMIN_HTML = CSS + """
         eps.forEach(e => {
             div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
                 <span>Season ${e.season} - Episode ${e.episode}</span>
-                <div>
-                    <button type="button" onclick="editEpisode('${e._id}')" style="background:#007bff; color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;"><i class="fas fa-edit"></i> Edit</button>
-                    <a href="/del_episode/${e._id}" onclick="return confirm('Delete?')" style="color:red; text-decoration:none; font-weight:bold; margin-left:10px;">Delete</a>
-                </div>
+                <a href="/del_episode/${e._id}" onclick="return confirm('Delete?')" style="color:red; text-decoration:none; font-weight:bold;">Delete</a>
             </div>`;
         });
-    }
-
-    async function editEpisode(id) {
-        let r = await fetch(`/api/get_episode/${id}`);
-        let e = await r.json();
-        document.getElementById('ep_e_id').value = e._id;
-        document.getElementById('ep_e_s').value = e.season;
-        document.getElementById('ep_e_e').value = e.episode;
-        openSec('editEpBox');
-    }
-
-    function updateEpSubmit(){
-        let fd = new FormData(document.getElementById('editEpFrm'));
-        let xhr = new XMLHttpRequest();
-        document.getElementById('ep_e_pCont').style.display = 'block';
-        xhr.upload.onprogress = (e) => {
-            let p = Math.round((e.loaded / e.total) * 100);
-            document.getElementById('ep_e_pBar').style.width = p + '%';
-            document.getElementById('ep_e_pBar').innerText = p + '%';
-        };
-        xhr.open("POST", "/update_episode_data");
-        xhr.onload = () => { alert("Episode Updated!"); location.reload(); };
-        xhr.send(fd);
     }
 
     async function editContent(id) {
@@ -636,22 +598,15 @@ ADMIN_HTML = CSS + """
 """
 
 # --- ৪. Flask রাউটস ---
-
+# (আপনার আগের সব রাউটস এখানে থাকবে)
 @app.route('/')
 def index():
     query = request.args.get('q')
     cats, otts = list(categories_col.find()), list(ott_col.find())
-    
     if query:
-        movies = list(movies_col.find({
-            "$or": [
-                {"title": {"$regex": query, "$options": "i"}},
-                {"ott": {"$regex": query, "$options": "i"}}
-            ]
-        }).sort("_id", -1))
+        movies = list(movies_col.find({"$or": [{"title": {"$regex": query, "$options": "i"}}, {"ott": {"$regex": query, "$options": "i"}} ]}).sort("_id", -1))
     else:
         movies = list(movies_col.find().sort("_id", -1))
-        
     return render_template_string(HOME_HTML, categories=cats, movies=movies, otts=otts, query=query, s=get_config())
 
 @app.route('/content/<id>')
@@ -701,16 +656,9 @@ def update_settings():
     if session.get('auth'):
         ftype = request.form.get('form_type')
         if ftype == 'general':
-            settings_col.update_one({"type": "config"}, {"$set": {
-                "site_name": request.form.get('site_name'), "notice_text": request.form.get('notice_text'), 
-                "notice_color": request.form.get('notice_color'), "ad_link": request.form.get('ad_link'), 
-                "ad_click_limit": int(request.form.get('ad_click_limit', 0))
-            }})
+            settings_col.update_one({"type": "config"}, {"$set": { "site_name": request.form.get('site_name'), "notice_text": request.form.get('notice_text'), "notice_color": request.form.get('notice_color'), "ad_link": request.form.get('ad_link'), "ad_click_limit": int(request.form.get('ad_click_limit', 0)) }})
         elif ftype == 'ads':
-            settings_col.update_one({"type": "config"}, {"$set": {
-                "popunder": request.form.get('popunder'), "banner_ad": request.form.get('banner_ad'), 
-                "native_ad": request.form.get('native_ad'), "socialbar_ad": request.form.get('socialbar_ad')
-            }})
+            settings_col.update_one({"type": "config"}, {"$set": { "popunder": request.form.get('popunder'), "banner_ad": request.form.get('banner_ad'), "native_ad": request.form.get('native_ad'), "socialbar_ad": request.form.get('socialbar_ad') }})
     return redirect('/admin')
 
 @app.route('/add_content', methods=['POST'])
@@ -722,12 +670,7 @@ def add_content():
             file.save(tf.name); up = cloudinary.uploader.upload_large(tf.name, resource_type="video")
             v_url = up['secure_url']
         os.remove(tf.name)
-    movies_col.insert_one({
-        "title": request.form.get('title'), "year": request.form.get('year'), "poster": request.form.get('poster'), 
-        "backdrop": request.form.get('backdrop'), "type": request.form.get('type'), "manual_badge": request.form.get('manual_badge'), 
-        "language": request.form.get('language'), "ott": request.form.get('ott'), "category_id": request.form.get('category_id'), 
-        "video_url": v_url, "likes": 0
-    })
+    movies_col.insert_one({ "title": request.form.get('title'), "year": request.form.get('year'), "poster": request.form.get('poster'), "backdrop": request.form.get('backdrop'), "type": request.form.get('type'), "manual_badge": request.form.get('manual_badge'), "language": request.form.get('language'), "ott": request.form.get('ott'), "category_id": request.form.get('category_id'), "video_url": v_url, "likes": 0 })
     return "OK"
 
 @app.route('/api/get_content/<id>')
@@ -740,11 +683,7 @@ def get_content_api(id):
 def update_content_data():
     if not session.get('auth'): return "No", 401
     mid = request.form.get('id')
-    update_data = {
-        "title": request.form.get('title'), "year": request.form.get('year'), "poster": request.form.get('poster'), 
-        "backdrop": request.form.get('backdrop'), "manual_badge": request.form.get('manual_badge'), 
-        "language": request.form.get('language'), "ott": request.form.get('ott'), "category_id": request.form.get('category_id')
-    }
+    update_data = { "title": request.form.get('title'), "year": request.form.get('year'), "poster": request.form.get('poster'), "backdrop": request.form.get('backdrop'), "manual_badge": request.form.get('manual_badge'), "language": request.form.get('language'), "ott": request.form.get('ott'), "category_id": request.form.get('category_id') }
     file = request.files.get('video_file')
     if file:
         with tempfile.NamedTemporaryFile(delete=False) as tf:
@@ -752,29 +691,6 @@ def update_content_data():
             update_data["video_url"] = up['secure_url']
         os.remove(tf.name)
     movies_col.update_one({"_id": ObjectId(mid)}, {"$set": update_data})
-    return "OK"
-
-@app.route('/api/get_episode/<id>')
-def get_episode_api(id):
-    e = episodes_col.find_one({"_id": ObjectId(id)})
-    e['_id'] = str(e['_id'])
-    return jsonify(e)
-
-@app.route('/update_episode_data', methods=['POST'])
-def update_episode_data():
-    if not session.get('auth'): return "No", 401
-    eid = request.form.get('id')
-    update_data = {
-        "season": int(request.form.get('season')),
-        "episode": int(request.form.get('episode'))
-    }
-    file = request.files.get('video_file')
-    if file:
-        with tempfile.NamedTemporaryFile(delete=False) as tf:
-            file.save(tf.name); up = cloudinary.uploader.upload_large(tf.name, resource_type="video")
-            update_data["video_url"] = up['secure_url']
-        os.remove(tf.name)
-    episodes_col.update_one({"_id": ObjectId(eid)}, {"$set": update_data})
     return "OK"
 
 @app.route('/add_episode', methods=['POST'])
@@ -841,5 +757,60 @@ def tmdb():
     q = request.args.get('q')
     return jsonify(requests.get(f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={q}").json())
 
+# --- টেলিগ্রাম বট লজিক ---
+
+user_data = {}
+
+@bot.message_handler(commands=['upload'])
+def start_upload(message):
+    bot.reply_to(message, "🎬 মুভি আপলোড শুরু হচ্ছে...\nপ্রথমে মুভির সঠিক নাম (Title) পাঠান।")
+    user_data[message.chat.id] = {'step': 'title'}
+
+@bot.message_handler(func=lambda m: user_data.get(m.chat.id, {}).get('step') == 'title')
+def get_title(message):
+    user_data[message.chat.id]['title'] = message.text
+    user_data[message.chat.id]['step'] = 'video'
+    bot.reply_to(message, f"মুভির নাম: {message.text}\nএখন মুভির ভিডিও ফাইলটি (File/Video) পাঠান।")
+
+@bot.message_handler(content_types=['video', 'document'])
+def get_video(message):
+    cid = message.chat.id
+    if user_data.get(cid, {}).get('step') == 'video':
+        bot.reply_to(message, "📥 ভিডিও পাওয়া গেছে! ক্লাউডে আপলোড হচ্ছে, দয়া করে অপেক্ষা করুন...")
+        
+        file_id = message.video.file_id if message.content_type == 'video' else message.document.file_id
+        file_info = bot.get_file(file_id)
+        file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+        
+        try:
+            # সরাসরি টেলিগ্রাম সার্ভার থেকে ক্লাউডিনারিতে আপলোড
+            up = cloudinary.uploader.upload_large(file_url, resource_type="video")
+            v_url = up['secure_url']
+            
+            # ডাটাবেসে সেভ (ডিফল্ট কিছু ভ্যালুসহ)
+            movies_col.insert_one({
+                "title": user_data[cid]['title'],
+                "year": datetime.now().year,
+                "poster": "https://via.placeholder.com/500x750?text=No+Poster",
+                "backdrop": "https://via.placeholder.com/1280x720?text=No+Backdrop",
+                "type": "movie",
+                "language": "Hindi",
+                "video_url": v_url,
+                "likes": 0
+            })
+            bot.send_message(cid, f"✅ সফলভাবে আপলোড হয়েছে!\nমুভির নাম: {user_data[cid]['title']}\nএখন সাইটে গিয়ে এডিট করে পোস্টার ও অন্যান্য তথ্য আপডেট করে নিন।")
+        except Exception as e:
+            bot.send_message(cid, f"❌ আপলোড ব্যর্থ হয়েছে: {e}")
+        
+        user_data[cid] = {}
+    else:
+        bot.reply_to(message, "আগে /upload কমান্ড দিন।")
+
+def run_bot():
+    print("Bot is running...")
+    bot.infinity_polling()
+
 if __name__ == '__main__':
+    # Flask এবং Bot একসাথে চালানোর জন্য থ্রেডিং ব্যবহার
+    threading.Thread(target=run_bot, daemon=True).start()
     app.run(host='0.0.0.0', port=5000)
