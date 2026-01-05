@@ -2,4 +2,5 @@ flask
 pymongo
 dnspython
 cloudinary
+requests
 gunicorn
