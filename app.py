@@ -17,7 +17,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "moviebox_ultra_premium_master_202
 # --- ডাটাবেস ও ক্লাউড সেটিংস ---
 MONGO_URI = os.environ.get("MONGO_URI", "mongodb+srv://Demo270:Demo270@cluster0.ls1igsg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "7dc544d9253bccc3cfecc1c677f69819")
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8552345370:AAHt5CoK6nS_TAbUjtHR3-BOp_6jFMKnOrk")
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN_HERE") # রেন্ডারে এনভায়রনমেন্ট ভেরিয়েবল সেট করুন
 
 cloudinary.config( 
   cloud_name = os.environ.get("CLOUDINARY_NAME", "dck0nrnt2"), 
@@ -814,3 +814,7 @@ if __name__ == '__main__':
     # Flask এবং Bot একসাথে চালানোর জন্য থ্রেডিং ব্যবহার
     threading.Thread(target=run_bot, daemon=True).start()
     app.run(host='0.0.0.0', port=5000)
+
+বট কাজ করে না কেন সব সেট আছে তো 
+বট স্টার্ট ও হয় না কেন? 
+আপনার দেওয়া কোড ই তো কপি করে দিলাম মাত্র
