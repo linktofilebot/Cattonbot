@@ -59,7 +59,7 @@ def get_config():
         settings_col.insert_one(conf)
     return conf
 
-# --- প্রিমিয়াম রেসপন্সিভ CSS (আপনার সব স্টাইল সহ) ---
+# --- প্রিমিয়াম রেসপন্সিভ CSS ---
 CSS = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -85,7 +85,6 @@ CSS = """
     .search-box { display: flex; align-items: center; background: #1a1a1a; border-radius: 25px; padding: 5px 20px; border: 1px solid #333; width: 100%; max-width: 550px; margin: 0 auto 15px; }
     .search-box input { background: transparent; border: none; color: #fff; width: 100%; padding: 10px; font-size: 15px; }
 
-    /* OTT Circular Slider */
     .ott-slider { display: flex; gap: 15px; overflow-x: auto; padding: 10px 0 20px; scrollbar-width: none; }
     .ott-slider::-webkit-scrollbar { display: none; }
     .ott-circle { flex: 0 0 auto; text-align: center; width: 75px; text-decoration: none; }
@@ -93,7 +92,6 @@ CSS = """
     .ott-circle:hover img { border-color: var(--main); transform: scale(1.05); }
     .ott-circle span { display: block; font-size: 10px; color: #fff; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* Horizontal Card Slider */
     .h-slider { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; scrollbar-width: none; }
     .h-slider::-webkit-scrollbar { display: none; }
     .h-slider .card { flex: 0 0 140px; }
@@ -109,7 +107,6 @@ CSS = """
     .badge-ott { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.85); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 5; border: 1px solid #444; }
     .card-title { padding: 10px; text-align: center; font-size: 13px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 
-    /* প্লেয়ার ও অ্যাকশন বার */
     video { width: 100%; border-radius: 12px; background: #000; aspect-ratio: 16/9; box-shadow: 0 0 20px rgba(0,0,0,0.6); }
     .ep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 10px; margin: 20px 0; }
     .ep-btn { background: #1a1a1a; color: #fff; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; border: 1px solid #333; font-size: 12px; font-weight: bold; transition: 0.3s; }
@@ -119,13 +116,11 @@ CSS = """
     .soc-btn { background: #1a1a1a; color: #fff; padding: 12px 18px; border-radius: 6px; border: 1px solid #333; cursor: pointer; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
     .soc-btn:hover { background: #333; }
 
-    /* কমেন্ট ও প্রোগ্রেস বার */
     .com-section { background: #0f0f0f; padding: 20px; border-radius: 12px; margin-top: 35px; border: 1px solid #222; }
     .com-item { background: #161616; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #252525; position: relative; }
     .progress-container { width: 100%; background: #222; border-radius: 10px; margin: 15px 0; display: none; overflow: hidden; border: 1px solid #444; }
     .progress-bar { width: 0%; height: 20px; background: linear-gradient(to right, #e50914, #ff4d4d); text-align: center; font-size: 12px; line-height: 20px; font-weight: bold; color: #fff; transition: 0.2s; }
 
-    /* এডমিন প্যানেল */
     .drw { position: fixed; top: 0; right: -100%; width: 300px; height: 100%; background: #0a0a0a; border-left: 1px solid #333; transition: 0.4s; z-index: 2000; padding-top: 50px; overflow-y: auto; }
     .drw.active { right: 0; }
     .drw a, .drw span { padding: 18px 25px; display: block; color: #fff; font-weight: bold; text-decoration: none; border-bottom: 1px solid #222; cursor: pointer; }
@@ -304,7 +299,7 @@ ADMIN_HTML = CSS + """
     <span onclick="openSec('upBox')"><i class="fas fa-upload"></i> 📤 Upload Content</span>
     <span onclick="openSec('epBox')"><i class="fas fa-plus-circle"></i> 🎞️ Add Episode</span>
     <span onclick="openSec('manageEpBox')"><i class="fas fa-folder-open"></i> 📂 Manage Episodes</span>
-    <span onclick="openSec('manageBox')"><i class="fas fa-tasks"></i> 🎬 Bulk Delete Content</span>
+    <span onclick="openSec('manageBox')"><i class="fas fa-tasks"></i> 🎬 Bulk Action / Edit</span>
     <span onclick="openSec('adBox')"><i class="fas fa-ad"></i> 💰 Ads Management</span>
     <span onclick="openSec('ottBox')"><i class="fas fa-tv"></i> 📺 OTT Platforms</span>
     <span onclick="openSec('catBox')"><i class="fas fa-list"></i> 📂 Categories</span>
@@ -376,6 +371,33 @@ ADMIN_HTML = CSS + """
         </form>
     </div>
 
+    <!-- এডিট বক্স (Hidden by Default) -->
+    <div id="editBox" class="sec-box">
+        <h3>✏️ Edit Content</h3>
+        <form id="editFrm">
+            <input type="hidden" name="id" id="e_id">
+            <input type="text" name="title" id="e_t" placeholder="Title" required>
+            <input type="text" name="year" id="e_y" placeholder="Year">
+            <input type="text" name="poster" id="e_p" placeholder="Poster URL">
+            <input type="text" name="backdrop" id="e_b" placeholder="Backdrop URL">
+            <input type="text" name="manual_badge" id="e_badge" placeholder="Badge">
+            <select name="language" id="e_lang">
+                {% for l in languages %}<option value="{{ l.name }}">{{ l.name }}</option>{% endfor %}
+            </select>
+            <select name="ott" id="e_ott">
+                {% for o in otts %}<option value="{{ o.name }}">{{ o.name }}</option>{% endfor %}
+            </select>
+            <select name="category_id" id="e_cat">
+                {% for c in categories %}<option value="{{ c._id|string }}">{{ c.name }}</option>{% endfor %}
+            </select>
+            <p style="font-size:12px; color:orange;">Keep blank to keep old video</p>
+            <input type="file" name="video_file" id="e_f_up" accept="video/mp4">
+            <div class="progress-container" id="e_pCont"><div class="progress-bar" id="e_pBar">0%</div></div>
+            <button type="button" onclick="updateContentSubmit()" class="btn-main">UPDATE NOW</button>
+            <button type="button" onclick="openSec('manageBox')" class="btn-main" style="background:#444; margin-top:10px;">CANCEL</button>
+        </form>
+    </div>
+
     <!-- ইপিসোড এড -->
     <div id="epBox" class="sec-box">
         <h3>🎞️ Add Episode</h3>
@@ -392,7 +414,7 @@ ADMIN_HTML = CSS + """
         </form>
     </div>
 
-    <!-- ইপিসোড ম্যানেজমেন্ট (Delete Individual Episodes) -->
+    <!-- ইপিসোড ম্যানেজমেন্ট (Edit/Delete) -->
     <div id="manageEpBox" class="sec-box">
         <h3>📂 Manage Episodes</h3>
         <select id="mSeries" onchange="loadEpisodes(this.value)">
@@ -402,14 +424,16 @@ ADMIN_HTML = CSS + """
         <div id="epList" style="margin-top:15px; border-top:1px solid #333;"></div>
     </div>
 
-    <!-- বাল্ক ডিলিট -->
+    <!-- বাল্ক ডিলিট ও এডিট লিস্ট -->
     <div id="manageBox" class="sec-box">
-        <h3>🎬 Bulk Delete Content</h3>
+        <h3>🎬 Bulk Action / Edit Content</h3>
         <form action="/bulk_delete" method="POST">
-            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #333; padding: 10px;">
+            <div style="max-height: 500px; overflow-y: auto; border: 1px solid #333; padding: 10px;">
                 {% for m in movies %}
-                <div style="padding:10px; border-bottom:1px solid #222;">
-                    <input type="checkbox" name="ids" value="{{ m._id }}"> {{ m.title }} ({{ m.type }})
+                <div style="padding:10px; border-bottom:1px solid #222; display:flex; align-items:center; gap:10px;">
+                    <input type="checkbox" name="ids" value="{{ m._id }}"> 
+                    <span style="flex:1;">{{ m.title }} ({{ m.type }})</span>
+                    <button type="button" onclick="editContent('{{ m._id }}')" style="background:#007bff; color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;"><i class="fas fa-edit"></i> Edit</button>
                 </div>
                 {% endfor %}
             </div>
@@ -447,7 +471,7 @@ ADMIN_HTML = CSS + """
 
 <script>
     function toggleMenu() { document.getElementById('drw').classList.toggle('active'); }
-    function openSec(id) { document.querySelectorAll('.sec-box').forEach(b => b.style.display='none'); document.getElementById(id).style.display='block'; toggleMenu(); }
+    function openSec(id) { document.querySelectorAll('.sec-box').forEach(b => b.style.display='none'); document.getElementById(id).style.display='block'; if(window.innerWidth < 800) toggleMenu(); }
     
     function findS() {
         let q = document.getElementById('sSch').value.toLowerCase();
@@ -467,9 +491,40 @@ ADMIN_HTML = CSS + """
         eps.forEach(e => {
             div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
                 <span>Season ${e.season} - Episode ${e.episode}</span>
-                <a href="/del_episode/${e._id}" style="color:red; text-decoration:none; font-weight:bold;">Delete</a>
+                <div>
+                    <a href="/del_episode/${e._id}" onclick="return confirm('Delete?')" style="color:red; text-decoration:none; font-weight:bold; margin-left:10px;">Delete</a>
+                </div>
             </div>`;
         });
+    }
+
+    async function editContent(id) {
+        let r = await fetch(`/api/get_content/${id}`);
+        let m = await r.json();
+        document.getElementById('e_id').value = m._id;
+        document.getElementById('e_t').value = m.title;
+        document.getElementById('e_y').value = m.year;
+        document.getElementById('e_p').value = m.poster;
+        document.getElementById('e_b').value = m.backdrop;
+        document.getElementById('e_badge').value = m.manual_badge || "";
+        document.getElementById('e_lang').value = m.language;
+        document.getElementById('e_ott').value = m.ott || "";
+        document.getElementById('e_cat').value = m.category_id;
+        openSec('editBox');
+    }
+
+    function updateContentSubmit(){
+        let fd = new FormData(document.getElementById('editFrm'));
+        let xhr = new XMLHttpRequest();
+        document.getElementById('e_pCont').style.display = 'block';
+        xhr.upload.onprogress = (e) => {
+            let p = Math.round((e.loaded / e.total) * 100);
+            document.getElementById('e_pBar').style.width = p + '%';
+            document.getElementById('e_pBar').innerText = p + '%';
+        };
+        xhr.open("POST", "/update_content_data");
+        xhr.onload = () => { alert("Updated!"); location.reload(); };
+        xhr.send(fd);
     }
 
     async function tmdbSearch(){
@@ -519,7 +574,7 @@ ADMIN_HTML = CSS + """
 </script>
 """
 
-# --- ৪. Flask রাউটস (পুরো লজিক) ---
+# --- ৪. Flask রাউটস ---
 
 @app.route('/')
 def index():
@@ -605,6 +660,31 @@ def add_content():
         "language": request.form.get('language'), "ott": request.form.get('ott'), "category_id": request.form.get('category_id'), 
         "video_url": v_url, "likes": 0
     })
+    return "OK"
+
+# --- নতুন এডিট ও আপডেট রাউটস ---
+@app.route('/api/get_content/<id>')
+def get_content_api(id):
+    m = movies_col.find_one({"_id": ObjectId(id)})
+    m['_id'] = str(m['_id'])
+    return jsonify(m)
+
+@app.route('/update_content_data', methods=['POST'])
+def update_content_data():
+    if not session.get('auth'): return "No", 401
+    mid = request.form.get('id')
+    update_data = {
+        "title": request.form.get('title'), "year": request.form.get('year'), "poster": request.form.get('poster'), 
+        "backdrop": request.form.get('backdrop'), "manual_badge": request.form.get('manual_badge'), 
+        "language": request.form.get('language'), "ott": request.form.get('ott'), "category_id": request.form.get('category_id')
+    }
+    file = request.files.get('video_file')
+    if file:
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            file.save(tf.name); up = cloudinary.uploader.upload_large(tf.name, resource_type="video")
+            update_data["video_url"] = up['secure_url']
+        os.remove(tf.name)
+    movies_col.update_one({"_id": ObjectId(mid)}, {"$set": update_data})
     return "OK"
 
 @app.route('/add_episode', methods=['POST'])
