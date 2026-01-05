@@ -91,6 +91,7 @@ CSS = """
     .ott-slider::-webkit-scrollbar { display: none; }
     .ott-circle { flex: 0 0 auto; text-align: center; width: 75px; text-decoration: none; }
     .ott-circle img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #333; transition: 0.3s; }
+    .ott-circle:hover img { border-color: var(--main); transform: scale(1.05); }
     .ott-circle span { display: block; font-size: 10px; color: #fff; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* Horizontal Card Slider */
@@ -171,7 +172,7 @@ HOME_HTML = CSS + """
             {% endfor %}
         </div>
     {% else %}
-        <div class="cat-title">Featured Movies <i class="fas fa-fire" style="color:orange;"></i></div>
+        <div class="cat-title">Featured Movies</div>
         <div class="h-slider">
             {% for m in movies if m.type == 'movie' %}
             <a href="/content/{{ m._id }}" class="card">
@@ -182,7 +183,7 @@ HOME_HTML = CSS + """
             {% endfor %}
         </div>
 
-        <div class="cat-title">Web Series <i class="fas fa-tv" style="color:cyan;"></i></div>
+        <div class="cat-title">Web Series</div>
         <div class="h-slider">
             {% for m in movies if m.type == 'series' %}
             <a href="/content/{{ m._id }}" class="card">
@@ -194,13 +195,11 @@ HOME_HTML = CSS + """
         </div>
 
         {% for cat in categories %}
-            {% set cat_id_str = cat._id|string %}
             <div class="cat-title">{{ cat.name }}</div>
             <div class="grid">
-                {% for m in movies if m.category_id == cat_id_str %}
+                {% for m in movies if m.category_id == cat._id|string %}
                 <a href="/content/{{ m._id }}" class="card">
-                    {% if m.manual_badge %}<div class="badge-manual">{{ m.manual_badge }}</div>{% endif %}
-                    <img src="{{ m.poster }}" loading="lazy">
+                    <img src="{{ m.poster }}">
                     <div class="card-title">{{ m.title }}</div>
                 </a>
                 {% endfor %}
@@ -225,9 +224,9 @@ DETAIL_HTML = CSS + """
         
         <video id="vBox" controls poster="{{ m.backdrop }}">
             {% if m.type == 'movie' %}
-                <source src="{{ m.video_url }}" type="video/mp4">
+                <source id="vSrc" src="{{ m.video_url }}" type="video/mp4">
             {% elif episodes %}
-                <source src="{{ episodes[0].video_url }}" type="video/mp4">
+                <source id="vSrc" src="{{ episodes[0].video_url }}" type="video/mp4">
             {% endif %}
         </video>
 
@@ -244,21 +243,19 @@ DETAIL_HTML = CSS + """
         </div>
         {% endif %}
 
-        <h1 style="margin-top:20px; font-size:28px;">{{ m.title }} ({{ m.year }})</h1>
-        <div style="margin: 10px 0; color: #ccc;">Language: {{ m.language }} | OTT: {{ m.ott }}</div>
-        
-        <button onclick="dlHandle()" class="btn-main" style="height:65px; font-size:22px; margin-top:15px;">📥 DOWNLOAD NOW</button>
-        <p id="dl-msg" style="text-align:center; color:var(--main); margin-top:15px; font-weight:bold;"></p>
+        <h1 style="margin-top:20px;">{{ m.title }} ({{ m.year }})</h1>
+        <button onclick="dlHandle()" class="btn-main" style="height:60px; font-size:20px;">📥 DOWNLOAD NOW</button>
+        <p id="dl-msg" style="text-align:center; color:var(--main); font-weight:bold; margin-top:10px;"></p>
 
-        <div style="background:#0f0f0f; padding:20px; border-radius:12px; margin-top:35px; border:1px solid #222;">
-            <h3>Discussions</h3>
+        <div style="background:#111; padding:20px; border-radius:10px; margin-top:30px;">
+            <h3>Comments</h3>
             <form action="/comment/{{ m._id }}" method="POST">
                 <input type="text" name="user" placeholder="Name" required>
-                <textarea name="text" rows="3" placeholder="Write a comment..." required></textarea>
-                <button class="btn-main" style="width: auto; padding: 10px 30px; margin-top:10px;">Post</button>
+                <textarea name="text" placeholder="Comment..." required></textarea>
+                <button class="btn-main" style="width:auto; padding:10px 30px;">Post</button>
             </form>
             {% for c in comments %}
-            <div style="background:#161616; padding:15px; border-radius:10px; margin-top:15px; border:1px solid #252525;">
+            <div style="border-bottom:1px solid #222; padding:10px 0;">
                 <b style="color:var(--main);">{{ c.user }}</b>: {{ c.text }}
             </div>
             {% endfor %}
@@ -267,123 +264,114 @@ DETAIL_HTML = CSS + """
     <div class="ad-slot">{{ s.socialbar_ad|safe }}</div>
 </div>
 <script>
-    let player = document.getElementById('vBox');
     let activeUrl = "{% if m.type == 'movie' %}{{ m.video_url }}{% elif episodes %}{{ episodes[0].video_url }}{% endif %}";
-
     function playEp(url, el) {
-        activeUrl = url;
-        player.src = url;
-        player.load();
-        player.play();
+        activeUrl = url; let p = document.getElementById('vBox'); 
+        p.src = url; p.load(); p.play();
         document.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('active'));
         el.classList.add('active');
-        window.scrollTo({ top: player.offsetTop - 100, behavior: 'smooth' });
     }
-
     function dlHandle() {
-        if(!activeUrl) { alert("Select episode first!"); return; }
+        if(!activeUrl) { alert("Select episode!"); return; }
         window.open("{{ s.ad_link }}", "_blank");
-        document.getElementById('dl-msg').innerText = "Opening Ad... Download starting soon.";
+        document.getElementById('dl-msg').innerText = "Ads Opening... Redirecting to Download";
         setTimeout(() => { window.location.href = activeUrl.replace("/upload/", "/upload/fl_attachment/"); }, 2000);
     }
 </script>
 """
 
-# --- ৩. এডমিন প্যানেল ---
+# --- ৩. এডমিন প্যানেল (আপডেট করা হয়েছে) ---
 ADMIN_HTML = CSS + """
 <nav class="nav"><a href="/admin" class="logo">ADMIN PANEL</a><div style="cursor:pointer; font-size:32px; color:var(--main); position:absolute; right:5%;" onclick="toggleMenu()">☰</div></nav>
 <div class="drw" id="drw">
-    <a href="/" style="background:var(--main);"><i class="fas fa-eye"></i> 👁️ View Site</a>
-    <span onclick="openSec('upBox')"><i class="fas fa-upload"></i> 📤 Upload Content</span>
-    <span onclick="openSec('epBox')"><i class="fas fa-plus-circle"></i> 🎞️ Add Episode</span>
-    <span onclick="openSec('manageBox')"><i class="fas fa-tasks"></i> 🎬 Manage All</span>
-    <span onclick="openSec('adBox')"><i class="fas fa-ad"></i> 💰 Ads Management</span>
-    <span onclick="openSec('ottBox')"><i class="fas fa-tv"></i> 📺 OTT Platforms</span>
-    <span onclick="openSec('catBox')"><i class="fas fa-list"></i> 📂 Categories</span>
-    <span onclick="openSec('langBox')"><i class="fas fa-language"></i> 🌐 Languages</span>
-    <span onclick="openSec('setBox')"><i class="fas fa-cog"></i> ⚙️ General Settings</span>
-    <a href="/logout" style="color:red;"><i class="fas fa-sign-out-alt"></i> 🔴 Logout</a>
+    <a href="/">👁️ View Site</a>
+    <span onclick="openSec('upBox')">📤 Upload Content</span>
+    <span onclick="openSec('epBox')">🎞️ Add Episode</span>
+    <span onclick="openSec('manageEpBox')">📂 Manage Episodes</span>
+    <span onclick="openSec('manageBox')">🎬 Bulk Delete Content</span>
+    <span onclick="openSec('adBox')">💰 Ads Management</span>
+    <span onclick="openSec('ottBox')">📺 OTT Platforms</span>
+    <span onclick="openSec('setBox')">⚙️ Settings</span>
+    <a href="/logout" style="color:red;">🔴 Logout</a>
 </div>
 
 <div class="container">
-    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px;">
-        <div class="stat-card"><b>{{ counts.movies }}</b>Movies</div>
-        <div class="stat-card"><b>{{ counts.series }}</b>Series</div>
-        <div class="stat-card"><b>{{ counts.episodes }}</b>Episodes</div>
-    </div>
-
-    <!-- জেনারেল সেটিংস -->
+    <!-- Settings -->
     <div id="setBox" class="sec-box" style="display:block;">
-        <h3>⚙️ General Settings</h3>
+        <h3>⚙️ Settings</h3>
         <form action="/update_settings" method="POST">
             <input type="hidden" name="form_type" value="general">
-            <label>Site Name</label><input type="text" name="site_name" value="{{ s.site_name }}">
-            <label>Notice Text</label><input type="text" name="notice_text" value="{{ s.notice_text }}">
-            <label>Notice Color (Hex)</label><input type="text" name="notice_color" value="{{ s.notice_color }}">
-            <label>Direct Download Link</label><input type="text" name="ad_link" value="{{ s.ad_link }}">
+            <input type="text" name="site_name" value="{{ s.site_name }}" placeholder="Site Name">
+            <input type="text" name="notice_text" value="{{ s.notice_text }}" placeholder="Notice Text">
+            <input type="text" name="notice_color" value="{{ s.notice_color }}" placeholder="Notice Color (Hex)">
+            <input type="text" name="ad_link" value="{{ s.ad_link }}" placeholder="Ad Link">
             <button class="btn-main">SAVE SETTINGS</button>
         </form>
     </div>
 
-    <!-- এড ম্যানেজমেন্ট -->
+    <!-- Ads -->
     <div id="adBox" class="sec-box">
-        <h3>💰 Ads Management (JS/HTML Code)</h3>
+        <h3>💰 Ads Management</h3>
         <form action="/update_settings" method="POST">
             <input type="hidden" name="form_type" value="ads">
-            <label>Popunder Ad Code</label><textarea name="popunder" rows="4">{{ s.popunder }}</textarea>
-            <label>Banner Ad Code</label><textarea name="banner_ad" rows="4">{{ s.banner_ad }}</textarea>
-            <label>Native Ad Code</label><textarea name="native_ad" rows="4">{{ s.native_ad }}</textarea>
-            <label>Social Bar Ad Code</label><textarea name="socialbar_ad" rows="4">{{ s.socialbar_ad }}</textarea>
+            <textarea name="popunder" placeholder="Popunder Code">{{ s.popunder }}</textarea>
+            <textarea name="banner_ad" placeholder="Banner Ad">{{ s.banner_ad }}</textarea>
+            <textarea name="native_ad" placeholder="Native Ad">{{ s.native_ad }}</textarea>
+            <textarea name="socialbar_ad" placeholder="Social Bar Ad">{{ s.socialbar_ad }}</textarea>
             <button class="btn-main">UPDATE ADS</button>
         </form>
     </div>
 
-    <!-- আপলোড কন্টেন্ট (TMDB & Progress) -->
+    <!-- Content Upload -->
     <div id="upBox" class="sec-box">
-        <h3>📤 Upload Movie/Series</h3>
-        <div style="display:flex; gap:10px;"><input type="text" id="tmdbQ" placeholder="Search TMDB..."><button onclick="tmdbSearch()" class="btn-main" style="width:100px;">Search</button></div>
-        <div id="tmdbRes" style="display:flex; gap:10px; overflow-x:auto; margin:10px 0; background:#000; padding:10px;"></div>
+        <h3>📤 Upload Content</h3>
+        <div style="display:flex; gap:10px;"><input type="text" id="tmdbQ"><button onclick="tmdbSearch()" class="btn-main" style="width:100px;">Search</button></div>
+        <div id="tmdbRes" style="display:flex; gap:10px; overflow-x:auto; margin:10px 0;"></div>
         <form id="upFrm">
-            <input type="text" name="title" id="t" placeholder="Title" required>
+            <input type="text" name="title" id="t" placeholder="Title">
             <input type="text" name="year" id="y" placeholder="Year">
             <input type="text" name="poster" id="p" placeholder="Poster URL">
             <input type="text" name="backdrop" id="b" placeholder="Backdrop URL">
-            <input type="text" name="manual_badge" placeholder="Badge (e.g. 4K, HD)">
             <select name="type"><option value="movie">Movie</option><option value="series">Web Series</option></select>
-            <select name="language">
-                {% for l in languages %}<option value="{{ l.name }}">{{ l.name }}</option>{% endfor %}
-            </select>
-            <select name="ott">
-                {% for o in otts %}<option value="{{ o.name }}">{{ o.name }}</option>{% endfor %}
-            </select>
             <select name="category_id">
                 {% for c in categories %}<option value="{{ c._id|string }}">{{ c.name }}</option>{% endfor %}
             </select>
-            <input type="file" name="video_file" id="f_up" accept="video/mp4">
+            <input type="file" name="video_file" id="f_up">
             <div class="progress-container" id="pCont"><div class="progress-bar" id="pBar">0%</div></div>
-            <button type="button" onclick="uploadContent()" class="btn-main">SAVE CONTENT</button>
+            <button type="button" onclick="uploadContent()" class="btn-main">SAVE</button>
         </form>
     </div>
 
-    <!-- ইপিসোড এড (সার্চ ফিক্স) -->
+    <!-- Add Episode -->
     <div id="epBox" class="sec-box">
         <h3>🎞️ Add Episode</h3>
-        <input type="text" id="sSch" placeholder="🔍 Search series name..." onkeyup="findS()" style="border:1px solid var(--main);">
+        <input type="text" id="sSch" placeholder="Search series..." onkeyup="findS()">
         <form id="epFrm">
             <select name="series_id" id="sSel">
                 {% for m in movies if m.type == 'series' %}<option value="{{ m._id|string }}">{{ m.title }}</option>{% endfor %}
             </select>
-            <input type="number" name="season" placeholder="Season" required>
-            <input type="number" name="episode" placeholder="Episode" required>
-            <input type="file" name="video_file" id="f_ep" accept="video/mp4">
+            <input type="number" name="season" placeholder="Season">
+            <input type="number" name="episode" placeholder="Episode">
+            <input type="file" name="video_file" id="f_ep">
             <div class="progress-container" id="epPCont"><div class="progress-bar" id="epPBar">0%</div></div>
-            <button type="button" onclick="uploadEp()" class="btn-main">UPLOAD EPISODE</button>
+            <button type="button" onclick="uploadEp()" class="btn-main">UPLOAD</button>
         </form>
     </div>
 
-    <!-- ম্যানেজ ও বাল্ক ডিলিট -->
+    <!-- Manage Episodes (DELETE EPISODES SECTION) -->
+    <div id="manageEpBox" class="sec-box">
+        <h3>📂 Manage Episodes</h3>
+        <p>Select a series to view and delete episodes:</p>
+        <select id="mSeries" onchange="loadEpisodes(this.value)">
+            <option value="">-- Select Series --</option>
+            {% for m in movies if m.type == 'series' %}<option value="{{ m._id|string }}">{{ m.title }}</option>{% endfor %}
+        </select>
+        <div id="epList" style="margin-top:20px; background:#000; border-radius:10px;"></div>
+    </div>
+
+    <!-- Bulk Delete Content -->
     <div id="manageBox" class="sec-box">
-        <h3>🎬 Manage Content</h3>
+        <h3>🎬 Bulk Delete Content</h3>
         <form action="/bulk_delete" method="POST">
             <div style="max-height: 400px; overflow-y: auto; border: 1px solid #333; padding: 10px;">
                 {% for m in movies %}
@@ -392,50 +380,52 @@ ADMIN_HTML = CSS + """
                 </div>
                 {% endfor %}
             </div>
-            <button class="btn-main" style="background:red; margin-top:15px;">DELETE SELECTED</button>
+            <button class="btn-main" style="background:red; margin-top:10px;">DELETE SELECTED</button>
         </form>
     </div>
 
+    <!-- OTT -->
     <div id="ottBox" class="sec-box">
         <h3>📺 OTT Platforms</h3>
         <form action="/add_ott" method="POST">
-            <input type="text" name="name" placeholder="Name" required>
-            <input type="text" name="logo" placeholder="Logo URL" required>
-            <button class="btn-main">Add OTT</button>
+            <input type="text" name="name" placeholder="Name">
+            <input type="text" name="logo" placeholder="Logo URL">
+            <button class="btn-main">Add</button>
         </form>
-        {% for o in otts %}
-        <div style="padding:10px; border-bottom:1px solid #222; display:flex; align-items:center;">
-            <img src="{{ o.logo }}" style="width:30px; height:30px; border-radius:50%; margin-right:10px;">
-            {{ o.name }} <a href="/del_ott/{{ o._id }}" style="color:red; margin-left:auto;">X</a>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div id="catBox" class="sec-box">
-        <h3>📂 Categories</h3>
-        <form action="/add_cat" method="POST"><input type="text" name="name" required><button class="btn-main">Add</button></form>
-        {% for c in categories %}<p>{{ c.name }} <a href="/del_cat/{{ c._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
-    </div>
-
-    <div id="langBox" class="sec-box">
-        <h3>🌐 Languages</h3>
-        <form action="/add_lang" method="POST"><input type="text" name="name" required><button class="btn-main">Add</button></form>
-        {% for l in languages %}<p>{{ l.name }} <a href="/del_lang/{{ l._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
+        {% for o in otts %}<p>{{ o.name }} <a href="/del_ott/{{ o._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
     </div>
 </div>
 
 <script>
     function toggleMenu() { document.getElementById('drw').classList.toggle('active'); }
-    function openSec(id) { document.querySelectorAll('.sec-box').forEach(b => b.style.display='none'); document.getElementById(id).style.display='block'; toggleMenu(); }
+    function openSec(id) { 
+        document.querySelectorAll('.sec-box').forEach(b => b.style.display='none'); 
+        document.getElementById(id).style.display='block'; 
+        toggleMenu(); 
+    }
     
     function findS() {
         let q = document.getElementById('sSch').value.toLowerCase();
         let sel = document.getElementById('sSel');
         for (let i = 0; i < sel.options.length; i++) {
-            let match = sel.options[i].text.toLowerCase().includes(q);
-            sel.options[i].style.display = match ? "block" : "none";
-            sel.options[i].disabled = !match;
+            sel.options[i].style.display = sel.options[i].text.toLowerCase().includes(q) ? "block" : "none";
         }
+    }
+
+    // Dynamic Load Episodes for deletion
+    async function loadEpisodes(sid) {
+        if(!sid) return;
+        let r = await fetch(`/api/episodes/${sid}`);
+        let eps = await r.json();
+        let div = document.getElementById('epList');
+        div.innerHTML = '';
+        if(eps.length === 0) div.innerHTML = '<p style="padding:15px;">No episodes found.</p>';
+        eps.forEach(e => {
+            div.innerHTML += `<div style="padding:12px; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
+                <span>Season ${e.season} - Episode ${e.episode}</span>
+                <a href="/del_episode/${e._id}" style="color:red; text-decoration:none; font-weight:bold;"><i class="fas fa-trash"></i> DELETE</a>
+            </div>`;
+        });
     }
 
     async function tmdbSearch(){
@@ -485,13 +475,17 @@ ADMIN_HTML = CSS + """
 </script>
 """
 
-# --- ৪. Flask রাউটস ---
+# --- Routes ---
 
 @app.route('/')
 def index():
     query = request.args.get('q')
-    cats, otts = list(categories_col.find()), list(ott_col.find())
-    movies = list(movies_col.find({"title": {"$regex": query, "$options": "i"}}).sort("_id", -1)) if query else list(movies_col.find().sort("_id", -1))
+    cats = list(categories_col.find())
+    otts = list(ott_col.find())
+    if query:
+        movies = list(movies_col.find({"title": {"$regex": query, "$options": "i"}}).sort("_id", -1))
+    else:
+        movies = list(movies_col.find().sort("_id", -1))
     return render_template_string(HOME_HTML, categories=cats, movies=movies, otts=otts, query=query, s=get_config())
 
 @app.route('/content/<id>')
@@ -507,45 +501,33 @@ def admin():
     if not session.get('auth'):
         return render_template_string(CSS + """<div class="container"><form action="/login" method="POST" class="sec-box" style="display:block; max-width:350px; margin:100px auto;"><h2>Admin Login</h2><input type="text" name="u" placeholder="Admin"><input type="password" name="p" placeholder="Pass"><button class="btn-main">LOGIN</button></form></div>""")
     counts = {"movies": movies_col.count_documents({"type": "movie"}), "series": movies_col.count_documents({"type": "series"}), "episodes": episodes_col.count_documents({})}
-    return render_template_string(ADMIN_HTML, movies=list(movies_col.find().sort("_id", -1)), languages=list(languages_col.find()), categories=list(categories_col.find()), otts=list(ott_col.find()), counts=counts, s=get_config())
+    return render_template_string(ADMIN_HTML, movies=list(movies_col.find().sort("_id", -1)), categories=list(categories_col.find()), otts=list(ott_col.find()), counts=counts, s=get_config())
 
 @app.route('/login', methods=['POST'])
 def login():
     if request.form['u'] == ADMIN_USER and request.form['p'] == ADMIN_PASS:
         session['auth'] = True
         return redirect('/admin')
-    return "Login Fail"
+    return "Fail"
 
 @app.route('/logout')
-def logout(): session.clear(); return redirect('/')
-
-@app.route('/update_settings', methods=['POST'])
-def update_settings():
-    if session.get('auth'):
-        ftype = request.form.get('form_type')
-        if ftype == 'general':
-            settings_col.update_one({"type": "config"}, {"$set": {
-                "site_name": request.form.get('site_name'), "notice_text": request.form.get('notice_text'), 
-                "notice_color": request.form.get('notice_color'), "ad_link": request.form.get('ad_link')
-            }})
-        elif ftype == 'ads':
-            settings_col.update_one({"type": "config"}, {"$set": {
-                "popunder": request.form.get('popunder'), "banner_ad": request.form.get('banner_ad'), 
-                "native_ad": request.form.get('native_ad'), "socialbar_ad": request.form.get('socialbar_ad')
-            }})
-    return redirect('/admin')
+def logout():
+    session.clear()
+    return redirect('/')
 
 @app.route('/add_content', methods=['POST'])
 def add_content():
     if not session.get('auth'): return "No", 401
-    file, v_url = request.files.get('video_file'), ""
+    file = request.files.get('video_file')
+    v_url = ""
     if file:
         with tempfile.NamedTemporaryFile(delete=False) as tf:
-            file.save(tf.name); up = cloudinary.uploader.upload_large(tf.name, resource_type="video")
+            file.save(tf.name)
+            up = cloudinary.uploader.upload_large(tf.name, resource_type="video", chunk_size=6000000)
             v_url = up['secure_url']
         os.remove(tf.name)
     movies_col.insert_one({
-        "title": request.form.get('title'), "year": request.form.get('year'), "poster": request.form.get('poster'), "backdrop": request.form.get('backdrop'), "type": request.form.get('type'), "manual_badge": request.form.get('manual_badge'), "language": request.form.get('language'), "ott": request.form.get('ott'), "category_id": request.form.get('category_id'), "video_url": v_url, "likes": 0
+        "title": request.form.get('title'), "year": request.form.get('year'), "poster": request.form.get('poster'), "backdrop": request.form.get('backdrop'), "type": request.form.get('type'), "category_id": request.form.get('category_id'), "video_url": v_url, "likes": 0
     })
     return "OK"
 
@@ -555,37 +537,45 @@ def add_episode():
     file = request.files.get('video_file')
     if file:
         with tempfile.NamedTemporaryFile(delete=False) as tf:
-            file.save(tf.name); up = cloudinary.uploader.upload_large(tf.name, resource_type="video")
+            file.save(tf.name)
+            up = cloudinary.uploader.upload_large(tf.name, resource_type="video", chunk_size=6000000)
             episodes_col.insert_one({"series_id": request.form.get('series_id'), "season": int(request.form.get('season')), "episode": int(request.form.get('episode')), "video_url": up['secure_url']})
         os.remove(tf.name)
     return "OK"
+
+@app.route('/del_episode/<id>')
+def del_episode(id):
+    if session.get('auth'):
+        episodes_col.delete_one({"_id": ObjectId(id)})
+    return redirect('/admin')
+
+@app.route('/api/episodes/<sid>')
+def get_episodes(sid):
+    eps = list(episodes_col.find({"series_id": sid}).sort([("season", 1), ("episode", 1)]))
+    for e in eps: e['_id'] = str(e['_id'])
+    return jsonify(eps)
 
 @app.route('/bulk_delete', methods=['POST'])
 def bulk_delete():
     if session.get('auth'):
         ids = request.form.getlist('ids')
         for i in ids:
-            movies_col.delete_one({"_id": ObjectId(i)}); episodes_col.delete_many({"series_id": i})
+            movies_col.delete_one({"_id": ObjectId(i)})
+            episodes_col.delete_many({"series_id": i})
     return redirect('/admin')
 
-@app.route('/add_cat', methods=['POST'])
-def add_cat():
-    if session.get('auth'): categories_col.insert_one({"name": request.form.get('name')})
-    return redirect('/admin')
-
-@app.route('/del_cat/<id>')
-def del_cat(id):
-    if session.get('auth'): categories_col.delete_one({"_id": ObjectId(id)})
-    return redirect('/admin')
-
-@app.route('/add_lang', methods=['POST'])
-def add_lang():
-    if session.get('auth'): languages_col.insert_one({"name": request.form.get('name')})
-    return redirect('/admin')
-
-@app.route('/del_lang/<id>')
-def del_lang(id):
-    if session.get('auth'): languages_col.delete_one({"_id": ObjectId(id)})
+@app.route('/update_settings', methods=['POST'])
+def update_settings():
+    if session.get('auth'):
+        ftype = request.form.get('form_type')
+        if ftype == 'general':
+            settings_col.update_one({"type": "config"}, {"$set": {
+                "site_name": request.form.get('site_name'), "notice_text": request.form.get('notice_text'), "notice_color": request.form.get('notice_color'), "ad_link": request.form.get('ad_link')
+            }})
+        elif ftype == 'ads':
+            settings_col.update_one({"type": "config"}, {"$set": {
+                "popunder": request.form.get('popunder'), "banner_ad": request.form.get('banner_ad'), "native_ad": request.form.get('native_ad'), "socialbar_ad": request.form.get('socialbar_ad')
+            }})
     return redirect('/admin')
 
 @app.route('/add_ott', methods=['POST'])
