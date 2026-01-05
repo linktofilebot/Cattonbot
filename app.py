@@ -16,7 +16,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "moviebox_ultra_premium_master_202
 
 MONGO_URI = "mongodb+srv://Demo270:Demo270@cluster0.ls1igsg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 TMDB_API_KEY = "7dc544d9253bccc3cfecc1c677f69819"
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8589295170:AAHSsqlS6Zp_c-xsIAqZOv6zNiU2m_U6cro") # রেন্ডারে এনভায়রনমেন্ট ভেরিয়েবল দিন
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "") # Render-এ এই ভেরিয়েবল দিন
 
 cloudinary.config( 
   cloud_name = "dck0nrnt2", 
@@ -24,10 +24,13 @@ cloudinary.config(
   api_secret = "a7y3o299JJqLfxmj9rLMK3hNbcg" 
 )
 
-# টেলিগ্রাম বট ইনিশিয়ালাইজ
+# টেলিগ্রাম বট ইনিশিয়ালাইজ (Error Handling সহ)
 bot = None
 if ":" in BOT_TOKEN:
-    bot = telebot.TeleBot(BOT_TOKEN)
+    try:
+        bot = telebot.TeleBot(BOT_TOKEN, threaded=True)
+    except Exception as e:
+        print(f"Bot Init Error: {e}")
 
 # MongoDB কানেকশন
 try:
@@ -68,38 +71,24 @@ CSS = """
     * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
     body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
     .nav { background: rgba(0,0,0,0.96); padding: 15px; display: flex; justify-content: center; align-items: center; border-bottom: 2px solid var(--main); position: sticky; top: 0; z-index: 1000; }
-    .logo { 
-        font-size: clamp(22px, 6vw, 30px); font-weight: bold; text-decoration: none; text-transform: uppercase; 
-        background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
-        background-size: 400% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
-        animation: rainbow 5s linear infinite; letter-spacing: 2px;
-    }
+    .logo { font-size: clamp(22px, 6vw, 30px); font-weight: bold; text-decoration: none; text-transform: uppercase; background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000); background-size: 400% auto; -webkit-background-clip: text; background-clip: text; color: transparent; animation: rainbow 5s linear infinite; letter-spacing: 2px; }
     @keyframes rainbow { to { background-position: 400% center; } }
     .container { max-width: 1400px; margin: auto; padding: 15px; }
     .search-box { display: flex; align-items: center; background: #1a1a1a; border-radius: 25px; padding: 5px 20px; border: 1px solid #333; width: 100%; max-width: 550px; margin: 0 auto 15px; }
     .search-box input { background: transparent; border: none; color: #fff; width: 100%; padding: 10px; font-size: 15px; }
-    .ott-slider { display: flex; gap: 15px; overflow-x: auto; padding: 10px 0 20px; scrollbar-width: none; }
-    .ott-circle { flex: 0 0 auto; text-align: center; width: 75px; text-decoration: none; }
-    .ott-circle img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #333; }
-    .cat-title { border-left: 5px solid var(--main); padding-left: 12px; margin: 30px 0 15px; font-size: 20px; font-weight: bold; text-transform: uppercase; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
-    @media (min-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 22px; } }
     .card { background: var(--card); border-radius: 10px; overflow: hidden; border: 1px solid #222; text-decoration: none; color: #fff; transition: 0.4s; display: block; position: relative; }
     .card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; }
     .card-title { padding: 10px; text-align: center; font-size: 13px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
-    video { width: 100%; border-radius: 12px; background: #000; aspect-ratio: 16/9; }
-    .btn-main { background: var(--main); color: #fff; border: none; padding: 14px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; text-align: center; display: inline-block; text-decoration: none; }
-    .drw { position: fixed; top: 0; right: -100%; width: 300px; height: 100%; background: #0a0a0a; border-left: 1px solid #333; transition: 0.4s; z-index: 2000; padding-top: 50px; overflow-y: auto; }
-    .drw.active { right: 0; }
-    .drw span, .drw a { padding: 18px 25px; display: block; color: #fff; text-decoration: none; border-bottom: 1px solid #222; cursor: pointer; font-weight: bold; }
+    .btn-main { background: var(--main); color: #fff; border: none; padding: 12px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; text-align: center; display: inline-block; text-decoration: none; }
     .sec-box { display: none; background: #111; padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid #222; }
     input, select, textarea { width: 100%; padding: 14px; margin: 10px 0; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 6px; }
-    .progress-container { width: 100%; background: #222; border-radius: 10px; margin: 15px 0; display: none; overflow: hidden; }
-    .progress-bar { width: 0%; height: 20px; background: var(--main); text-align: center; font-size: 12px; color: #fff; }
+    .drw { position: fixed; top: 0; right: -100%; width: 300px; height: 100%; background: #0a0a0a; border-left: 1px solid #333; transition: 0.4s; z-index: 2000; padding-top: 50px; overflow-y: auto; }
+    .drw.active { right: 0; }
+    .drw span, .drw a { padding: 18px 25px; display: block; color: #fff; text-decoration: none; border-bottom: 1px solid #222; cursor: pointer; }
 </style>
 """
 
-# --- ৩. ফ্রন্টএন্ড ভিউস ---
+# --- ৩. ফ্রন্টএন্ড রাউটস ---
 
 @app.route('/')
 def index():
@@ -115,17 +104,17 @@ HOME_HTML = CSS + """
 {{ s.popunder|safe }}
 <nav class="nav"><a href="/" class="logo">{{ s.site_name }}</a></nav>
 <div class="container">
-    <div style="color:{{ s.notice_color }}; text-align:center; margin-bottom:15px; font-weight:bold;">{{ s.notice_text }}</div>
     <form action="/" method="GET" class="search-box">
         <input type="text" name="q" placeholder="Search..." value="{{ query or '' }}">
         <button type="submit" style="background:none; border:none; color:#888;"><i class="fas fa-search"></i></button>
     </form>
-    <div class="ott-slider">
-        {% for o in otts %}<a href="/?q={{ o.name }}" class="ott-circle"><img src="{{ o.logo }}"><span>{{ o.name }}</span></a>{% endfor %}
-    </div>
-    <div class="cat-title">Latest Content</div>
     <div class="grid">
-        {% for m in movies %}<a href="/content/{{ m._id }}" class="card"><img src="{{ m.poster }}"><div class="card-title">{{ m.title }}</div></a>{% endfor %}
+        {% for m in movies %}
+        <a href="/content/{{ m._id }}" class="card">
+            <img src="{{ m.poster }}">
+            <div class="card-title">{{ m.title }}</div>
+        </a>
+        {% endfor %}
     </div>
 </div>
 """
@@ -135,23 +124,20 @@ def content_detail(id):
     m = movies_col.find_one({"_id": ObjectId(id)})
     if not m: return redirect('/')
     eps = list(episodes_col.find({"series_id": id}).sort([("season", 1), ("episode", 1)]))
-    s = get_config()
-    return render_template_string(DETAIL_HTML, m=m, eps=eps, s=s)
+    return render_template_string(DETAIL_HTML, m=m, eps=eps, s=get_config())
 
 DETAIL_HTML = CSS + """
 <nav class="nav"><a href="/" class="logo">{{ s.site_name }}</a></nav>
 <div class="container">
-    <video id="vBox" controls poster="{{ m.backdrop }}">
+    <video id="vBox" controls style="width:100%; border-radius:10px;" poster="{{ m.backdrop }}">
         <source src="{{ m.video_url if m.type == 'movie' else (eps[0].video_url if eps else '') }}" type="video/mp4">
     </video>
-    {% if eps %}<div class="cat-title">Episodes</div><div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap:10px;">
-    {% for e in eps %}<div onclick="document.getElementById('vBox').src='{{ e.video_url }}'; document.getElementById('vBox').play()" style="background:#222; padding:10px; text-align:center; cursor:pointer; border-radius:5px; font-size:12px;">S{{ e.season }} E{{ e.episode }}</div>{% endfor %}</div>{% endif %}
     <h1>{{ m.title }}</h1>
-    <button onclick="window.open('{{ s.ad_link }}'); window.location.href=document.getElementById('vBox').src" class="btn-main" style="margin-top:20px;">📥 DOWNLOAD NOW</button>
+    <button onclick="window.location.href=document.getElementById('vBox').src" class="btn-main" style="margin-top:20px;">📥 DOWNLOAD NOW</button>
 </div>
 """
 
-# --- ৪. অ্যাডমিন প্যানেল (Search ফিচারসহ) ---
+# --- ৪. অ্যাডমিন প্যানেল (সার্চ এবং ম্যানেজমেন্টসহ) ---
 
 @app.route('/admin')
 def admin():
@@ -163,47 +149,20 @@ def admin():
     return render_template_string(ADMIN_HTML, movies=movies, counts=counts, s=get_config(), otts=list(ott_col.find()), categories=list(categories_col.find()), languages=list(languages_col.find()))
 
 ADMIN_HTML = CSS + """
-<nav class="nav"><a href="/admin" class="logo">ADMIN PANEL</a><div style="cursor:pointer; font-size:32px; position:absolute; right:20px;" onclick="document.getElementById('drw').classList.toggle('active')">☰</div></nav>
+<nav class="nav"><a href="/admin" class="logo">ADMIN</a><div style="cursor:pointer; font-size:30px; position:absolute; right:20px;" onclick="document.getElementById('drw').classList.toggle('active')">☰</div></nav>
 <div class="drw" id="drw">
-    <a href="/">👁️ View Site</a>
     <span onclick="openSec('upBox')">📤 Upload Content</span>
-    <span onclick="openSec('epBox')">🎞️ Add Episode</span>
     <span onclick="openSec('manageBox')">🎬 Bulk Action / Search</span>
     <span onclick="openSec('epManageBox')">📂 Manage Episodes</span>
-    <span onclick="openSec('ottBox')">📺 OTT Platforms</span>
-    <span onclick="openSec('catBox')">📂 Categories</span>
-    <span onclick="openSec('langBox')">🌐 Languages</span>
     <span onclick="openSec('setBox')">⚙️ Settings</span>
-    <a href="/logout" style="color:red;">🔴 Logout</a>
+    <a href="/logout" style="color:red;">Logout</a>
 </div>
-
 <div class="container">
-    <div style="display:flex; gap:10px; margin-bottom:20px;">
-        <div style="background:#111; padding:15px; flex:1; text-align:center; border-radius:10px;"><b>{{ counts.movies }}</b><br>Movies</div>
-        <div style="background:#111; padding:15px; flex:1; text-align:center; border-radius:10px;"><b>{{ counts.series }}</b><br>Series</div>
-    </div>
-
-    <!-- আপলোড বক্স -->
-    <div id="upBox" class="sec-box" style="display:block;">
-        <h3>Upload Movie/Series</h3>
-        <div style="display:flex; gap:10px;"><input type="text" id="tmdbQ" placeholder="TMDB Search..."><button onclick="tmdbSearch()" class="btn-main" style="width:100px;">Search</button></div>
-        <div id="tmdbRes" style="display:flex; gap:10px; overflow-x:auto; margin-top:10px;"></div>
-        <form id="upFrm">
-            <input type="text" name="title" id="t" placeholder="Title" required>
-            <input type="text" name="poster" id="p" placeholder="Poster URL">
-            <input type="text" name="backdrop" id="b" placeholder="Backdrop URL">
-            <select name="type"><option value="movie">Movie</option><option value="series">Web Series</option></select>
-            <input type="file" name="video_file" id="f_up">
-            <div class="progress-container" id="pCont"><div class="progress-bar" id="pBar">0%</div></div>
-            <button type="button" onclick="uploadContent()" class="btn-main">SAVE CONTENT</button>
-        </form>
-    </div>
-
-    <!-- বাল্ক একশন ও সার্চ -->
-    <div id="manageBox" class="sec-box">
+    <!-- কন্টেন্ট ম্যানেজমেন্ট ও লাইভ সার্চ -->
+    <div id="manageBox" class="sec-box" style="display:block;">
         <h3>🎬 Bulk Action / Search</h3>
-        <input type="text" id="bulkSch" placeholder="🔍 Search content title..." onkeyup="filterBulk()" style="border:1px solid var(--main);">
-        <div id="bulkList" style="max-height:450px; overflow-y:auto; margin-top:10px;">
+        <input type="text" id="bulkSch" placeholder="🔍 Search content..." onkeyup="filterBulk()" style="border:1px solid var(--main);">
+        <div id="bulkList" style="max-height:400px; overflow-y:auto; margin-top:10px;">
             {% for m in movies %}
             <div class="b-item" style="padding:10px; border-bottom:1px solid #222; display:flex; justify-content:space-between;">
                 <span>{{ m.title }}</span><a href="/del_movie/{{ m._id }}" style="color:red;">Delete</a>
@@ -223,23 +182,21 @@ ADMIN_HTML = CSS + """
         <div id="epList" style="margin-top:15px;"></div>
     </div>
 
-    <!-- সেটিংস বক্স -->
-    <div id="setBox" class="sec-box">
-        <h3>⚙️ Settings</h3>
-        <form action="/update_settings" method="POST">
-            <input type="text" name="site_name" value="{{ s.site_name }}" placeholder="Site Name">
-            <input type="text" name="ad_link" value="{{ s.ad_link }}" placeholder="Ad Link">
-            <button class="btn-main">SAVE SETTINGS</button>
+    <!-- আপলোড সেকশন ও TMDB সার্চ -->
+    <div id="upBox" class="sec-box">
+        <h3>Upload / TMDB Search</h3>
+        <div style="display:flex; gap:10px;"><input type="text" id="tmdbQ" placeholder="RRR..."><button onclick="tmdbSearch()" class="btn-main" style="width:100px;">Search</button></div>
+        <div id="tmdbRes" style="display:flex; gap:10px; overflow-x:auto; margin-top:10px; background:#000;"></div>
+        <form action="/add_content" method="POST" enctype="multipart/form-data">
+            <input type="text" name="title" id="t" placeholder="Title" required>
+            <input type="text" name="poster" id="p" placeholder="Poster URL">
+            <input type="text" name="backdrop" id="b" placeholder="Backdrop URL">
+            <select name="type"><option value="movie">Movie</option><option value="series">Web Series</option></select>
+            <input type="file" name="video_file">
+            <button class="btn-main">SAVE</button>
         </form>
     </div>
-    
-    <!-- OTT, Category, Language বক্সেস -->
-    <div id="ottBox" class="sec-box">
-        <form action="/add_ott" method="POST"><input type="text" name="name" placeholder="OTT Name"><input type="text" name="logo" placeholder="Logo URL"><button class="btn-main">Add OTT</button></form>
-        {% for o in otts %}<p>{{ o.name }} <a href="/del_ott/{{ o._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
-    </div>
 </div>
-
 <script>
     function openSec(id){ document.querySelectorAll('.sec-box').forEach(s=>s.style.display='none'); document.getElementById(id).style.display='block'; document.getElementById('drw').classList.remove('active'); }
     function filterBulk(){
@@ -269,19 +226,10 @@ ADMIN_HTML = CSS + """
         let div = document.getElementById('epList'); div.innerHTML = '';
         data.forEach(e => { div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #222;">S${e.season} E${e.episode} <a href="/del_ep/${e._id}" style="color:red; float:right;">X</a></div>`; });
     }
-    function uploadContent(){
-        let fd = new FormData(document.getElementById('upFrm'));
-        let xhr = new XMLHttpRequest();
-        document.getElementById('pCont').style.display = 'block';
-        xhr.upload.onprogress = (e) => { let p = Math.round((e.loaded/e.total)*100); document.getElementById('pBar').style.width = p+'%'; document.getElementById('pBar').innerText = p+'%'; };
-        xhr.open("POST", "/add_content");
-        xhr.onload = () => { alert("Saved!"); location.reload(); };
-        xhr.send(fd);
-    }
 </script>
 """
 
-# --- ৫. এপিআই রাউটস ও একশনস ---
+# --- ৫. এপিআই এবং একশনস (TMDB & Episode Fix) ---
 
 @app.route('/api/tmdb')
 def tmdb_api():
@@ -311,38 +259,27 @@ def add_content():
     if file:
         up = cloudinary.uploader.upload_large(file, resource_type="video")
         v_url = up['secure_url']
-    movies_col.insert_one({
-        "title": request.form.get('title'), "poster": request.form.get('poster'), 
-        "backdrop": request.form.get('backdrop'), "type": request.form.get('type'), 
-        "video_url": v_url, "likes": 0, "year": datetime.now().year
-    })
-    return "OK"
+    movies_col.insert_one({"title": request.form.get('title'), "poster": request.form.get('poster'), "backdrop": request.form.get('backdrop'), "type": request.form.get('type'), "video_url": v_url, "likes": 0, "year": datetime.now().year})
+    return redirect('/admin')
 
 @app.route('/del_movie/<id>')
 def del_movie(id):
     if session.get('auth'): movies_col.delete_one({"_id": ObjectId(id)}); episodes_col.delete_many({"series_id": id})
     return redirect('/admin')
 
-@app.route('/add_ott', methods=['POST'])
-def add_ott():
-    if session.get('auth'): ott_col.insert_one({"name": request.form.get('name'), "logo": request.form.get('logo')})
-    return redirect('/admin')
-
-@app.route('/del_ott/<id>')
-def del_ott(id):
-    if session.get('auth'): ott_col.delete_one({"_id": ObjectId(id)})
-    return redirect('/admin')
-
-@app.route('/update_settings', methods=['POST'])
-def update_settings():
-    if session.get('auth'):
-        settings_col.update_one({"type": "config"}, {"$set": {"site_name": request.form.get('site_name'), "ad_link": request.form.get('ad_link')}})
+@app.route('/del_ep/<id>')
+def del_ep(id):
+    if session.get('auth'): episodes_col.delete_one({"_id": ObjectId(id)})
     return redirect('/admin')
 
 # --- ৬. টেলিগ্রাম বট লজিক (ক্লাউড আপলোড সিস্টেম) ---
 user_data = {}
 
 if bot:
+    @bot.message_handler(commands=['start'])
+    def bot_start(message):
+        bot.reply_to(message, "🎬 মুভি আপলোড করতে /upload দিন।")
+
     @bot.message_handler(commands=['upload'])
     def bot_up(message):
         bot.reply_to(message, "📽️ মুভির নাম (Title) পাঠান:")
@@ -358,28 +295,32 @@ if bot:
     def bot_video(message):
         cid = message.chat.id
         if user_data.get(cid, {}).get('step') == 'video':
-            bot.reply_to(message, "⏳ ক্লাউডিনারিতে আপলোড হচ্ছে... দয়া করে অপেক্ষা করুন।")
+            bot.reply_to(message, "⏳ ক্লাউডিনারিতে আপলোড শুরু হয়েছে... বড় ফাইল হলে কিছুক্ষণ সময় লাগতে পারে।")
             try:
+                # ফাইল আইডি থেকে তথ্য নেওয়া
                 file_id = message.video.file_id if message.content_type == 'video' else message.document.file_id
                 file_info = bot.get_file(file_id)
+                # সরাসরি টেলিগ্রাম সার্ভার থেকে আপলোড লিঙ্ক তৈরি
                 file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
                 
-                # রেন্ডার সার্ভার বাইপাস করে সরাসরি টেলিগ্রাম লিঙ্ক ক্লাউডিনারিতে পাঠানো
+                # রেন্ডার সার্ভারের মেমোরি ব্যবহার না করে সরাসরি লিঙ্ক আপলোড
                 up = cloudinary.uploader.upload_large(file_url, resource_type="video")
                 
                 movies_col.insert_one({
                     "title": user_data[cid]['title'], "year": datetime.now().year, "type": "movie",
                     "poster": "https://via.placeholder.com/500x750", "video_url": up['secure_url'], "likes": 0
                 })
-                bot.send_message(cid, f"✅ সফলভাবে আপলোড হয়েছে!\nনাম: {user_data[cid]['title']}")
+                bot.send_message(cid, f"✅ সফল! {user_data[cid]['title']} সাইটে অ্যাড হয়েছে।")
             except Exception as e:
                 bot.send_message(cid, f"❌ এরর: {e}")
             user_data[cid] = {}
 
 def run_bot():
-    if bot: bot.infinity_polling()
+    if bot:
+        print("Telegram Bot is running...")
+        bot.infinity_polling(timeout=60, long_polling_timeout=30)
 
 if __name__ == '__main__':
-    # বটকে আলাদা থ্রেডে চালানো যাতে সাইট ও বট একসাথে চলে
+    # বটকে আলাদা থ্রেডে চালানো যাতে ফ্ল্যাস্ক এবং বট একসাথে চলে
     threading.Thread(target=run_bot, daemon=True).start()
     app.run(host='0.0.0.0', port=5000)
