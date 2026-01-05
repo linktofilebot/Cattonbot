@@ -10,9 +10,9 @@ import cloudinary.uploader
 
 # --- অ্যাপ কনফিগারেশন ---
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "moviebox_premium_ultra_2026_complete")
+app.secret_key = os.environ.get("SECRET_KEY", "moviebox_ultra_premium_master_2026")
 
-# --- ডাটাবেস ও ক্লাউড সেটিংস (এখানে আপনার তথ্য বসান) ---
+# --- ডাটাবেস ও ক্লাউড সেটিংস (আপনার তথ্যগুলো এখানে দিন) ---
 MONGO_URI = os.environ.get("MONGO_URI", "your_mongodb_uri")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "your_tmdb_api_key")
 
@@ -22,7 +22,7 @@ cloudinary.config(
   api_secret = os.environ.get("CLOUDINARY_API_SECRET", "your_api_secret") 
 )
 
-# MongoDB কানেকশন ও কালেকশন
+# MongoDB কানেকশন ও কালেকশনস
 try:
     client = MongoClient(MONGO_URI)
     db = client['moviebox_v5_db']
@@ -34,13 +34,13 @@ try:
     settings_col = db['settings']
     comments_col = db['comments']
 except Exception as e:
-    print(f"Database Error: {e}")
+    print(f"Database Connection Error: {e}")
 
 # এডমিন ক্রেডেনশিয়াল
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASS = os.environ.get("ADMIN_PASS", "12345")
 
-# সাইট সেটিংস ফাংশন
+# সাইট সেটিংস লোড ফাংশন
 def get_config():
     conf = settings_col.find_one({"type": "config"})
     if not conf:
@@ -49,26 +49,27 @@ def get_config():
             "site_name": "MOVIEBOX PRO",
             "ad_link": "https://ad-link.com", 
             "ad_click_limit": 2,
-            "notice_text": "Welcome! Latest movies updated daily.",
-            "notice_color": "#ffffff",
-            "popunder": "", "native": ""
+            "notice_text": "Welcome to MovieBox Pro! Latest movies and web series are updated here.",
+            "notice_color": "#00ff00",
+            "popunder": "", 
+            "native": ""
         }
         settings_col.insert_one(conf)
     return conf
 
-# --- প্রিমিয়াম রেসপন্সিভ CSS (মোবাইল ও ডেক্সটপ) ---
+# --- প্রিমিয়াম রেসপন্সিভ CSS (অটো মোবাইল ও ডেক্সটপ) ---
 CSS = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
     :root { --main: #e50914; --bg: #050505; --card: #121212; --text: #ffffff; }
     * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
-    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
     
-    /* রেইনবো লোগো (সেন্টারড) */
+    /* হেডারে মাজখানে রেইনবো লোগো */
     .nav { background: rgba(0,0,0,0.96); padding: 15px; display: flex; justify-content: center; align-items: center; border-bottom: 2px solid var(--main); position: sticky; top: 0; z-index: 1000; }
     .logo { 
-        font-size: clamp(22px, 6vw, 32px); font-weight: bold; text-decoration: none; text-transform: uppercase; 
+        font-size: clamp(22px, 6vw, 30px); font-weight: bold; text-decoration: none; text-transform: uppercase; 
         background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
         background-size: 400% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
         animation: rainbow 5s linear infinite; letter-spacing: 2px;
@@ -82,37 +83,40 @@ CSS = """
     .search-box { display: flex; align-items: center; background: #1a1a1a; border-radius: 25px; padding: 5px 20px; border: 1px solid #333; width: 100%; max-width: 550px; margin: 0 auto 30px; }
     .search-box input { background: transparent; border: none; color: #fff; width: 100%; padding: 10px; font-size: 15px; }
 
-    /* গ্রিড সিস্টেম ও ডাবল ব্যাজ */
+    /* কন্টেন্ট গ্রিড ও ব্যাজ সিস্টেম */
     .cat-title { border-left: 5px solid var(--main); padding-left: 12px; margin: 30px 0 15px; font-size: 20px; font-weight: bold; text-transform: uppercase; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
-    @media (min-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 20px; } }
+    @media (min-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 22px; } }
     
     .card { background: var(--card); border-radius: 10px; overflow: hidden; border: 1px solid #222; text-decoration: none; color: #fff; transition: 0.4s; position: relative; display: block; }
-    .card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; }
+    .card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; }
     .card:hover { border-color: var(--main); transform: translateY(-5px); box-shadow: 0 5px 15px rgba(229, 9, 20, 0.4); }
     
-    /* ম্যানুয়াল ব্যাজ ডিজাইন */
-    .manual-badge { position: absolute; top: 8px; right: 8px; background: var(--main); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 5; box-shadow: 0 2px 5px #000; }
-    .ott-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.85); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; border: 1px solid #444; z-index: 5; }
+    /* ব্যাজ ডিজাইন (ম্যানুয়াল টেক্সট) */
+    .badge-manual { position: absolute; top: 10px; right: 10px; background: var(--main); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 5; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+    .badge-ott { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.85); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 5; border: 1px solid #444; }
     
     .card-title { padding: 10px; text-align: center; font-size: 13px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 
-    /* ভিডিও ও সোশ্যাল */
-    video { width: 100%; border-radius: 12px; background: #000; aspect-ratio: 16/9; }
+    /* প্লেয়ার ও এপিসোড */
+    video { width: 100%; border-radius: 12px; background: #000; aspect-ratio: 16/9; box-shadow: 0 0 20px rgba(0,0,0,0.6); }
     .ep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 10px; margin: 20px 0; }
     .ep-btn { background: #222; color: #fff; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; border: 1px solid #333; font-size: 12px; font-weight: bold; }
-    .ep-btn.active { background: var(--main); border-color: var(--main); }
+    .ep-btn.active { background: var(--main); border-color: var(--main); box-shadow: 0 0 10px var(--main); }
 
+    /* সোশ্যাল বার ও কমেন্ট */
     .action-bar { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
     .soc-btn { background: #1a1a1a; color: #fff; padding: 12px 18px; border-radius: 6px; border: 1px solid #333; cursor: pointer; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
-    
+    .soc-btn:hover { background: #333; }
+
     .com-section { background: #0f0f0f; padding: 20px; border-radius: 12px; margin-top: 35px; border: 1px solid #222; }
     .com-item { background: #161616; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #252525; position: relative; }
     .com-user { color: var(--main); font-weight: bold; font-size: 14px; }
-    .com-like-btn { position: absolute; bottom: 10px; right: 15px; font-size: 13px; color: #777; text-decoration: none; }
+    .com-like-btn { position: absolute; bottom: 12px; right: 20px; font-size: 13px; color: #777; text-decoration: none; display: flex; align-items: center; gap: 5px; }
+    .com-like-btn:hover { color: var(--main); }
 
     /* প্রোগ্রেস বার */
-    .progress-container { width: 100%; background: #222; border-radius: 10px; margin: 15px 0; display: none; overflow: hidden; }
+    .progress-container { width: 100%; background: #222; border-radius: 10px; margin: 15px 0; display: none; overflow: hidden; border: 1px solid #444; }
     .progress-bar { width: 0%; height: 20px; background: linear-gradient(to right, #e50914, #ff4d4d); text-align: center; font-size: 12px; line-height: 20px; font-weight: bold; color: #fff; transition: 0.2s; }
 
     /* এডমিন ড্রয়ার */
@@ -120,11 +124,11 @@ CSS = """
     .drw.active { right: 0; }
     .drw a, .drw span { padding: 18px 25px; display: block; color: #fff; font-weight: bold; text-decoration: none; border-bottom: 1px solid #222; cursor: pointer; }
     .drw a:hover, .drw span:hover { background: #1a1a1a; color: var(--main); }
-    
     .sec-box { display: none; background: #111; padding: 20px; border-radius: 12px; margin-top: 20px; border: 1px solid #222; }
     input, select, textarea { width: 100%; padding: 14px; margin: 10px 0; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 6px; }
     .btn-main { background: var(--main); color: #fff; border: none; padding: 14px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; text-align: center; display: inline-block; font-size: 16px; text-decoration: none; }
     .stat-card { background: #1a1a1a; padding: 15px; border-radius: 8px; flex: 1; min-width: 120px; text-align: center; border: 1px solid #333; }
+    .stat-card b { font-size: 22px; color: var(--main); display: block; }
 </style>
 """
 
@@ -142,12 +146,12 @@ HOME_HTML = CSS + """
     </form>
 
     {% if query %}
-        <div class="cat-title">Results for: {{ query }}</div>
+        <div class="cat-title">Search Results</div>
         <div class="grid">
             {% for m in movies %}
             <a href="/content/{{ m._id }}" class="card">
-                {% if m.manual_badge %}<div class="manual-badge">{{ m.manual_badge }}</div>{% endif %}
-                {% if m.ott %}<div class="ott-badge">{{ m.ott }}</div>{% endif %}
+                {% if m.manual_badge %}<div class="badge-manual">{{ m.manual_badge }}</div>{% endif %}
+                {% if m.ott %}<div class="badge-ott">{{ m.ott }}</div>{% endif %}
                 <img src="{{ m.poster }}" loading="lazy">
                 <div class="card-title">{{ m.title }} ({{ m.year }})</div>
             </a>
@@ -160,21 +164,20 @@ HOME_HTML = CSS + """
             <div class="grid">
                 {% for m in movies if m.category_id == cat_id_str %}
                 <a href="/content/{{ m._id }}" class="card">
-                    {% if m.manual_badge %}<div class="manual-badge">{{ m.manual_badge }}</div>{% endif %}
-                    {% if m.ott %}<div class="ott-badge">{{ m.ott }}</div>{% endif %}
+                    {% if m.manual_badge %}<div class="badge-manual">{{ m.manual_badge }}</div>{% endif %}
+                    {% if m.ott %}<div class="badge-ott">{{ m.ott }}</div>{% endif %}
                     <img src="{{ m.poster }}" loading="lazy">
                     <div class="card-title">{{ m.title }} ({{ m.year }})</div>
                 </a>
                 {% endfor %}
             </div>
         {% endfor %}
-        
-        <div class="cat-title">Latest Content</div>
+        <div class="cat-title">Recently Added</div>
         <div class="grid">
             {% for m in movies[:24] %}
             <a href="/content/{{ m._id }}" class="card">
-                {% if m.manual_badge %}<div class="manual-badge">{{ m.manual_badge }}</div>{% endif %}
-                {% if m.ott %}<div class="ott-badge">{{ m.ott }}</div>{% endif %}
+                {% if m.manual_badge %}<div class="badge-manual">{{ m.manual_badge }}</div>{% endif %}
+                {% if m.ott %}<div class="badge-ott">{{ m.ott }}</div>{% endif %}
                 <img src="{{ m.poster }}" loading="lazy">
                 <div class="card-title">{{ m.title }}</div>
             </a>
@@ -185,7 +188,7 @@ HOME_HTML = CSS + """
 {{ s.popunder|safe }}
 """
 
-# --- টেম্পলেট ২: কন্টেন্ট ডিটেইলস ---
+# --- টেম্পলেট ২: ডিটেইলস পেজ ---
 DETAIL_HTML = CSS + """
 <nav class="nav"><a href="/" class="logo">{{ s.site_name }}</a></nav>
 <div style="background: url('{{ m.backdrop }}') center/cover fixed; position: fixed; top:0; left:0; width:100%; height:100%; filter: blur(35px) brightness(0.2); z-index:-1;"></div>
@@ -210,7 +213,7 @@ DETAIL_HTML = CSS + """
             <a href="https://api.whatsapp.com/send?text={{ share_url }}" target="_blank" class="soc-btn" style="background:#25d366;"><i class="fab fa-whatsapp"></i> WhatsApp</a>
         </div>
 
-        <h1 style="font-size:30px;">{{ m.title }} ({{ m.year }}) <span style="font-size:14px; color:var(--main);">[{{ m.language }}]</span></h1>
+        <h1 style="font-size:30px; margin-bottom:10px;">{{ m.title }} ({{ m.year }}) <span style="font-size:14px; color:var(--main);">[{{ m.language }}]</span></h1>
         
         <button onclick="dlHandle()" class="btn-main" style="height:65px; font-size:22px; margin-top:15px;">📥 DOWNLOAD NOW</button>
         <p id="dl-msg" style="text-align:center; color:var(--main); margin-top:15px; font-weight:bold;"></p>
@@ -218,8 +221,8 @@ DETAIL_HTML = CSS + """
         <div class="com-section">
             <h3>Discussions</h3>
             <form action="/comment/{{ m._id }}" method="POST">
-                <input type="text" name="user" placeholder="Name" required>
-                <textarea name="text" rows="3" placeholder="Write comment..." required></textarea>
+                <input type="text" name="user" placeholder="Your Name" required>
+                <textarea name="text" rows="3" placeholder="Write a comment..." required></textarea>
                 <button class="btn-main" style="width: auto; padding: 10px 30px; margin-top:10px;">Post</button>
             </form>
             {% for c in comments %}
@@ -245,7 +248,7 @@ DETAIL_HTML = CSS + """
         if(!activeUrl) { alert("Select episode first!"); return; }
         if(ads < {{ s.ad_click_limit }}) {
             ads++;
-            document.getElementById('dl-msg').innerText = "Ad Opening... (" + ads + "/{{ s.ad_click_limit }})";
+            document.getElementById('dl-msg').innerText = "Ads Opening... (" + ads + "/{{ s.ad_click_limit }})";
             window.open("{{ s.ad_link }}", "_blank");
         } else {
             window.location.href = activeUrl.replace("/upload/", "/upload/fl_attachment/");
@@ -258,15 +261,15 @@ DETAIL_HTML = CSS + """
 ADMIN_HTML = CSS + """
 <nav class="nav"><a href="/admin" class="logo">ADMIN PANEL</a><div style="cursor:pointer; font-size:32px; color:var(--main); position:absolute; right:5%;" onclick="toggleMenu()">☰</div></nav>
 <div class="drw" id="drw">
-    <a href="/" style="background:var(--main);">👁️ View Site</a>
-    <span onclick="openSec('upBox')">📤 Upload Movie/Series</span>
-    <span onclick="openSec('epBox')">🎞️ Add Episode</span>
-    <span onclick="openSec('manageBox')">🎬 Manage Content</span>
-    <span onclick="openSec('ottBox')">📺 OTT Platforms</span>
-    <span onclick="openSec('catBox')">📂 Categories</span>
-    <span onclick="openSec('langBox')">🌐 Languages</span>
-    <span onclick="openSec('setBox')">⚙️ Settings</span>
-    <a href="/logout" style="color:red;">🔴 Logout</a>
+    <a href="/" style="background:var(--main);"><i class="fas fa-eye"></i> 👁️ View Site</a>
+    <span onclick="openSec('upBox')"><i class="fas fa-upload"></i> 📤 Upload Content</span>
+    <span onclick="openSec('epBox')"><i class="fas fa-plus-circle"></i> 🎞️ Add Episode</span>
+    <span onclick="openSec('manageBox')"><i class="fas fa-tasks"></i> 🎬 Manage All</span>
+    <span onclick="openSec('ottBox')"><i class="fas fa-tv"></i> 📺 OTT Platforms</span>
+    <span onclick="openSec('catBox')"><i class="fas fa-list"></i> 📂 Categories</span>
+    <span onclick="openSec('langBox')"><i class="fas fa-language"></i> 🌐 Languages</span>
+    <span onclick="openSec('setBox')"><i class="fas fa-cog"></i> ⚙️ Settings</span>
+    <a href="/logout" style="color:red;"><i class="fas fa-sign-out-alt"></i> 🔴 Logout</a>
 </div>
 
 <div class="container">
@@ -276,9 +279,9 @@ ADMIN_HTML = CSS + """
         <div class="stat-card"><b>{{ counts.episodes }}</b>Episodes</div>
     </div>
 
-    <!-- কন্টেন্ট আপলোড -->
+    <!-- কন্টেন্ট আপলোড উইথ প্রোগ্রেস বার -->
     <div id="upBox" class="sec-box" style="display:block;">
-        <h3>Upload Movie/Series</h3>
+        <h3>📤 Upload Movie/Series</h3>
         <div style="display:flex; gap:10px;"><input type="text" id="tmdbQ"><button onclick="tmdbSearch()" class="btn-main" style="width:100px;">Search</button></div>
         <div id="tmdbRes" style="display:flex; gap:10px; overflow-x:auto; margin:10px 0; background:#000; padding:10px;"></div>
         <form id="upFrm">
@@ -286,13 +289,14 @@ ADMIN_HTML = CSS + """
             <input type="text" name="year" id="y" placeholder="Year">
             <input type="text" name="poster" id="p" placeholder="Poster URL">
             <input type="text" name="backdrop" id="b" placeholder="Backdrop URL">
-            <select name="type"><option value="movie">Movie</option><option value="series">Series</option></select>
             <input type="text" name="manual_badge" placeholder="Poster Badge Text (e.g. HD, 4K, New)">
+            <select name="type"><option value="movie">Movie</option><option value="series">Web Series</option></select>
             <select name="language">
+                <option value="">Language</option>
                 {% for l in languages %}<option value="{{ l.name }}">{{ l.name }}</option>{% endfor %}
             </select>
             <select name="ott">
-                <option value="">No OTT Label</option>
+                <option value="">OTT Label</option>
                 {% for o in otts %}<option value="{{ o.name }}">{{ o.name }}</option>{% endfor %}
             </select>
             <select name="category_id">
@@ -300,13 +304,13 @@ ADMIN_HTML = CSS + """
             </select>
             <input type="file" name="video_file" id="f_up" accept="video/mp4">
             <div class="progress-container" id="pCont"><div class="progress-bar" id="pBar">0%</div></div>
-            <button type="button" onclick="uploadContent()" class="btn-main" style="background:green;">UPLOAD NOW</button>
+            <button type="button" onclick="uploadContent()" class="btn-main" style="background:green;">SAVE CONTENT</button>
         </form>
     </div>
 
-    <!-- এপিসোড আপলোড (সার্চ সহ) -->
+    <!-- এপিসোড আপলোড উইথ সার্চ -->
     <div id="epBox" class="sec-box">
-        <h3>Add Episode</h3>
+        <h3>🎞️ Add Episode</h3>
         <input type="text" id="sSch" placeholder="🔍 Search series name..." onkeyup="findS()" style="border: 2px solid var(--main);">
         <form id="epFrm">
             <select name="series_id" id="sSel">
@@ -320,39 +324,53 @@ ADMIN_HTML = CSS + """
         </form>
     </div>
 
-    <!-- ম্যানেজ কন্টেন্ট -->
+    <!-- ম্যানেজ কন্টেন্ট (সার্চ ও বাল্ক ডিলিট) -->
     <div id="manageBox" class="sec-box">
-        <h3>🎬 All Content</h3>
-        <div style="max-height: 400px; overflow-y: auto;">
-        {% for m in movies %}
-        <div style="padding:10px; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
-            <span>{{ m.title }} (❤️ {{ m.likes or 0 }})</span>
-            <a href="/del_movie/{{ m._id }}" style="color:red;" onclick="return confirm('Delete?')">DELETE</a>
-        </div>
-        {% endfor %}
-        </div>
+        <h3>🎬 Manage All Content</h3>
+        <input type="text" id="mSch" placeholder="🔍 Search movie/series name to delete..." onkeyup="filterManage()">
+        <form action="/bulk_delete" method="POST">
+            <div style="max-height: 450px; overflow-y: auto; margin-top:15px;">
+                <table style="width:100%; text-align:left; border-collapse:collapse;">
+                    <tr style="border-bottom:1px solid #444;">
+                        <th><input type="checkbox" onclick="selectAll(this)"></th>
+                        <th>Title</th>
+                        <th>Type</th>
+                        <th>Action</th>
+                    </tr>
+                    {% for m in movies %}
+                    <tr class="m-row" style="border-bottom:1px solid #222;">
+                        <td><input type="checkbox" name="ids" value="{{ m._id }}"></td>
+                        <td>{{ m.title }}</td>
+                        <td>{{ m.type }}</td>
+                        <td><a href="/del_movie/{{ m._id }}" style="color:red; text-decoration:none;">Delete</a></td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <button class="btn-main" style="margin-top:15px; background:red;">DELETE SELECTED</button>
+        </form>
     </div>
 
     <div id="ottBox" class="sec-box">
         <h3>📺 OTT Labels</h3>
         <form action="/add_ott" method="POST"><input type="text" name="name" required><button class="btn-main">Add</button></form>
-        {% for o in otts %}<p>{{ o.name }} <a href="/del_ott/{{ o._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
+        {% for o in otts %}<p style="padding:8px; border-bottom:1px solid #222;">{{ o.name }} <a href="/del_ott/{{ o._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
     </div>
 
     <div id="catBox" class="sec-box">
         <h3>📂 Categories</h3>
         <form action="/add_cat" method="POST"><input type="text" name="name" required><button class="btn-main">Add</button></form>
-        {% for c in categories %}<p>{{ c.name }} <a href="/del_cat/{{ c._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
+        {% for c in categories %}<p style="padding:8px; border-bottom:1px solid #222;">{{ c.name }} <a href="/del_cat/{{ c._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
     </div>
 
     <div id="langBox" class="sec-box">
         <h3>🌐 Languages</h3>
         <form action="/add_lang" method="POST"><input type="text" name="name" required><button class="btn-main">Add</button></form>
-        {% for l in languages %}<p>{{ l.name }} <a href="/del_lang/{{ l._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
+        {% for l in languages %}<p style="padding:8px; border-bottom:1px solid #222;">{{ l.name }} <a href="/del_lang/{{ l._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
     </div>
 
     <div id="setBox" class="sec-box">
-        <h3>⚙️ Global Settings</h3>
+        <h3>⚙️ Settings</h3>
         <form action="/update_settings" method="POST">
             <input type="text" name="site_name" value="{{ s.site_name }}">
             <input type="text" name="notice_text" value="{{ s.notice_text }}">
@@ -366,11 +384,22 @@ ADMIN_HTML = CSS + """
 <script>
     function toggleMenu() { document.getElementById('drw').classList.toggle('active'); }
     function openSec(id) { document.querySelectorAll('.sec-box').forEach(b => b.style.display='none'); document.getElementById(id).style.display='block'; toggleMenu(); }
+    
     function findS() {
         let q = document.getElementById('sSch').value.toLowerCase();
         let sel = document.getElementById('sSel');
         for (let i = 0; i < sel.options.length; i++) { sel.options[i].style.display = sel.options[i].text.toLowerCase().includes(q) ? "block" : "none"; }
     }
+
+    function filterManage() {
+        let q = document.getElementById('mSch').value.toLowerCase();
+        document.querySelectorAll('.m-row').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(q) ? "" : "none"; });
+    }
+
+    function selectAll(source) {
+        document.querySelectorAll('input[name="ids"]').forEach(cb => cb.checked = source.checked);
+    }
+
     async function tmdbSearch(){
         let q = document.getElementById('tmdbQ').value;
         let r = await fetch(`/api/tmdb?q=${q}`);
@@ -387,6 +416,7 @@ ADMIN_HTML = CSS + """
             res.appendChild(img);
         });
     }
+
     function uploadContent(){
         let fd = new FormData(document.getElementById('upFrm'));
         let xhr = new XMLHttpRequest();
@@ -394,12 +424,13 @@ ADMIN_HTML = CSS + """
         xhr.upload.onprogress = (e) => {
             let p = Math.round((e.loaded / e.total) * 100);
             document.getElementById('pBar').style.width = p + '%';
-            document.getElementById('pBar').innerText = p + '% Uploaded';
+            document.getElementById('pBar').innerText = p + '%';
         };
         xhr.open("POST", "/add_content");
         xhr.onload = () => { alert("Saved!"); location.reload(); };
         xhr.send(fd);
     }
+
     function uploadEp(){
         let fd = new FormData(document.getElementById('epFrm'));
         let xhr = new XMLHttpRequest();
@@ -407,16 +438,16 @@ ADMIN_HTML = CSS + """
         xhr.upload.onprogress = (e) => {
             let p = Math.round((e.loaded / e.total) * 100);
             document.getElementById('epPBar').style.width = p + '%';
-            document.getElementById('epPBar').innerText = p + '% Uploaded';
+            document.getElementById('epPBar').innerText = p + '%';
         };
         xhr.open("POST", "/add_episode");
-        xhr.onload = () => { alert("Done!"); location.reload(); };
+        xhr.onload = () => { alert("Episode Added!"); location.reload(); };
         xhr.send(fd);
     }
 </script>
 """
 
-# --- Flask রাউটস ---
+# --- Flask রাউটস (লজিক) ---
 
 @app.route('/')
 def index():
@@ -434,7 +465,8 @@ def content_detail(id):
     if not m: return redirect('/')
     episodes = list(episodes_col.find({"series_id": id}).sort([("season", 1), ("episode", 1)]))
     comments = list(comments_col.find({"movie_id": id}).sort("_id", -1))
-    return render_template_string(DETAIL_HTML, m=m, episodes=episodes, comments=comments, share_url=request.url, s=get_config())
+    share_url = request.url
+    return render_template_string(DETAIL_HTML, m=m, episodes=episodes, comments=comments, share_url=share_url, s=get_config())
 
 @app.route('/like/<id>')
 def like_content(id):
@@ -498,6 +530,22 @@ def add_episode():
         os.remove(tf.name)
     return "OK"
 
+@app.route('/del_movie/<id>')
+def del_movie(id):
+    if session.get('auth'):
+        movies_col.delete_one({"_id": ObjectId(id)})
+        episodes_col.delete_many({"series_id": id})
+    return redirect('/admin')
+
+@app.route('/bulk_delete', methods=['POST'])
+def bulk_delete():
+    if session.get('auth'):
+        ids = request.form.getlist('ids')
+        for i in ids:
+            movies_col.delete_one({"_id": ObjectId(i)})
+            episodes_col.delete_many({"series_id": i})
+    return redirect('/admin')
+
 @app.route('/add_cat', methods=['POST'])
 def add_cat():
     if session.get('auth'): categories_col.insert_one({"name": request.form.get('name')})
@@ -519,20 +567,13 @@ def del_lang(id):
     return redirect('/admin')
 
 @app.route('/add_ott', methods=['POST'])
-def add_lang_ott():
+def add_ott():
     if session.get('auth'): ott_col.insert_one({"name": request.form.get('name')})
     return redirect('/admin')
 
 @app.route('/del_ott/<id>')
 def del_ott(id):
     if session.get('auth'): ott_col.delete_one({"_id": ObjectId(id)})
-    return redirect('/admin')
-
-@app.route('/del_movie/<id>')
-def del_movie(id):
-    if session.get('auth'):
-        movies_col.delete_one({"_id": ObjectId(id)})
-        episodes_col.delete_many({"series_id": id})
     return redirect('/admin')
 
 @app.route('/update_settings', methods=['POST'])
