@@ -10,9 +10,9 @@ import cloudinary.uploader
 
 # --- অ্যাপ কনফিগারেশন ---
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "moviebox_premium_ultimate_master_2026")
+app.secret_key = os.environ.get("SECRET_KEY", "moviebox_premium_ultra_2026_complete")
 
-# --- ডাটাবেস ও ক্লাউড সেটিংস (আপনার অরিজিনাল তথ্য এখানে দিন) ---
+# --- ডাটাবেস ও ক্লাউড সেটিংস (এখানে আপনার তথ্য বসান) ---
 MONGO_URI = os.environ.get("MONGO_URI", "your_mongodb_uri")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "your_tmdb_api_key")
 
@@ -22,7 +22,7 @@ cloudinary.config(
   api_secret = os.environ.get("CLOUDINARY_API_SECRET", "your_api_secret") 
 )
 
-# MongoDB কানেকশন
+# MongoDB কানেকশন ও কালেকশন
 try:
     client = MongoClient(MONGO_URI)
     db = client['moviebox_v5_db']
@@ -49,10 +49,9 @@ def get_config():
             "site_name": "MOVIEBOX PRO",
             "ad_link": "https://ad-link.com", 
             "ad_click_limit": 2,
-            "notice_text": "Welcome to our site! Join our telegram for daily updates.",
+            "notice_text": "Welcome! Latest movies updated daily.",
             "notice_color": "#ffffff",
-            "popunder": "", 
-            "native": ""
+            "popunder": "", "native": ""
         }
         settings_col.insert_one(conf)
     return conf
@@ -64,12 +63,12 @@ CSS = """
 <style>
     :root { --main: #e50914; --bg: #050505; --card: #121212; --text: #ffffff; }
     * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
+    body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
     
-    /* হেডারে মাজখানে রেইনবো লোগো */
+    /* রেইনবো লোগো (সেন্টারড) */
     .nav { background: rgba(0,0,0,0.96); padding: 15px; display: flex; justify-content: center; align-items: center; border-bottom: 2px solid var(--main); position: sticky; top: 0; z-index: 1000; }
     .logo { 
-        font-size: clamp(22px, 6vw, 30px); font-weight: bold; text-decoration: none; text-transform: uppercase; 
+        font-size: clamp(22px, 6vw, 32px); font-weight: bold; text-decoration: none; text-transform: uppercase; 
         background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
         background-size: 400% auto; -webkit-background-clip: text; background-clip: text; color: transparent;
         animation: rainbow 5s linear infinite; letter-spacing: 2px;
@@ -78,31 +77,34 @@ CSS = """
     
     .container { max-width: 1400px; margin: auto; padding: 15px; }
 
-    /* নোটিশ বার ও সার্চ বক্স */
+    /* নোটিশ ও সার্চ */
     .notice-bar { width: 100%; padding: 12px; margin-bottom: 20px; background: #111; border: 1px dashed #444; border-radius: 8px; text-align: center; font-weight: bold; font-size: 14px; }
     .search-box { display: flex; align-items: center; background: #1a1a1a; border-radius: 25px; padding: 5px 20px; border: 1px solid #333; width: 100%; max-width: 550px; margin: 0 auto 30px; }
     .search-box input { background: transparent; border: none; color: #fff; width: 100%; padding: 10px; font-size: 15px; }
 
-    /* কন্টেন্ট গ্রিড ও ডাবল ব্যাজ */
+    /* গ্রিড সিস্টেম ও ডাবল ব্যাজ */
     .cat-title { border-left: 5px solid var(--main); padding-left: 12px; margin: 30px 0 15px; font-size: 20px; font-weight: bold; text-transform: uppercase; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
-    @media (min-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 22px; } }
+    @media (min-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 20px; } }
     
     .card { background: var(--card); border-radius: 10px; overflow: hidden; border: 1px solid #222; text-decoration: none; color: #fff; transition: 0.4s; position: relative; display: block; }
-    .card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; }
+    .card img { width: 100%; aspect-ratio: 2/3; object-fit: cover; }
     .card:hover { border-color: var(--main); transform: translateY(-5px); box-shadow: 0 5px 15px rgba(229, 9, 20, 0.4); }
     
-    .badge-lang { position: absolute; top: 10px; right: 10px; background: var(--main); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 5; }
-    .badge-ott { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.85); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 5; border: 1px solid #444; }
+    /* ম্যানুয়াল ব্যাজ ডিজাইন */
+    .manual-badge { position: absolute; top: 8px; right: 8px; background: var(--main); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; text-transform: uppercase; z-index: 5; box-shadow: 0 2px 5px #000; }
+    .ott-badge { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,0.85); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; border: 1px solid #444; z-index: 5; }
+    
     .card-title { padding: 10px; text-align: center; font-size: 13px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 
-    /* প্লেয়ার ও সোশ্যাল */
+    /* ভিডিও ও সোশ্যাল */
     video { width: 100%; border-radius: 12px; background: #000; aspect-ratio: 16/9; }
+    .ep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(85px, 1fr)); gap: 10px; margin: 20px 0; }
     .ep-btn { background: #222; color: #fff; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; border: 1px solid #333; font-size: 12px; font-weight: bold; }
     .ep-btn.active { background: var(--main); border-color: var(--main); }
 
     .action-bar { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
-    .soc-btn { background: #1a1a1a; color: #fff; padding: 12px 18px; border-radius: 6px; border: 1px solid #333; cursor: pointer; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .soc-btn { background: #1a1a1a; color: #fff; padding: 12px 18px; border-radius: 6px; border: 1px solid #333; cursor: pointer; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
     
     .com-section { background: #0f0f0f; padding: 20px; border-radius: 12px; margin-top: 35px; border: 1px solid #222; }
     .com-item { background: #161616; padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid #252525; position: relative; }
@@ -140,12 +142,12 @@ HOME_HTML = CSS + """
     </form>
 
     {% if query %}
-        <div class="cat-title">Search Results</div>
+        <div class="cat-title">Results for: {{ query }}</div>
         <div class="grid">
             {% for m in movies %}
             <a href="/content/{{ m._id }}" class="card">
-                <div class="badge-lang">{{ m.language }}</div>
-                {% if m.ott %}<div class="badge-ott">{{ m.ott }}</div>{% endif %}
+                {% if m.manual_badge %}<div class="manual-badge">{{ m.manual_badge }}</div>{% endif %}
+                {% if m.ott %}<div class="ott-badge">{{ m.ott }}</div>{% endif %}
                 <img src="{{ m.poster }}" loading="lazy">
                 <div class="card-title">{{ m.title }} ({{ m.year }})</div>
             </a>
@@ -156,24 +158,23 @@ HOME_HTML = CSS + """
             {% set cat_id_str = cat._id|string %}
             <div class="cat-title">{{ cat.name }}</div>
             <div class="grid">
-                {% for m in movies %}
-                    {% if m.category_id == cat_id_str %}
-                    <a href="/content/{{ m._id }}" class="card">
-                        <div class="badge-lang">{{ m.language }}</div>
-                        {% if m.ott %}<div class="badge-ott">{{ m.ott }}</div>{% endif %}
-                        <img src="{{ m.poster }}" loading="lazy">
-                        <div class="card-title">{{ m.title }} ({{ m.year }})</div>
-                    </a>
-                    {% endif %}
+                {% for m in movies if m.category_id == cat_id_str %}
+                <a href="/content/{{ m._id }}" class="card">
+                    {% if m.manual_badge %}<div class="manual-badge">{{ m.manual_badge }}</div>{% endif %}
+                    {% if m.ott %}<div class="ott-badge">{{ m.ott }}</div>{% endif %}
+                    <img src="{{ m.poster }}" loading="lazy">
+                    <div class="card-title">{{ m.title }} ({{ m.year }})</div>
+                </a>
                 {% endfor %}
             </div>
         {% endfor %}
-        <div class="cat-title">Recently Added</div>
+        
+        <div class="cat-title">Latest Content</div>
         <div class="grid">
             {% for m in movies[:24] %}
             <a href="/content/{{ m._id }}" class="card">
-                <div class="badge-lang">{{ m.language }}</div>
-                {% if m.ott %}<div class="badge-ott">{{ m.ott }}</div>{% endif %}
+                {% if m.manual_badge %}<div class="manual-badge">{{ m.manual_badge }}</div>{% endif %}
+                {% if m.ott %}<div class="ott-badge">{{ m.ott }}</div>{% endif %}
                 <img src="{{ m.poster }}" loading="lazy">
                 <div class="card-title">{{ m.title }}</div>
             </a>
@@ -184,7 +185,7 @@ HOME_HTML = CSS + """
 {{ s.popunder|safe }}
 """
 
-# --- টেম্পলেট ২: ডিটেইলস পেজ ---
+# --- টেম্পলেট ২: কন্টেন্ট ডিটেইলস ---
 DETAIL_HTML = CSS + """
 <nav class="nav"><a href="/" class="logo">{{ s.site_name }}</a></nav>
 <div style="background: url('{{ m.backdrop }}') center/cover fixed; position: fixed; top:0; left:0; width:100%; height:100%; filter: blur(35px) brightness(0.2); z-index:-1;"></div>
@@ -196,7 +197,7 @@ DETAIL_HTML = CSS + """
 
         {% if m.type == 'series' %}
         <div class="cat-title">Select Episode</div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 10px; margin: 20px 0;">
+        <div class="ep-grid">
             {% for ep in episodes %}
             <div class="ep-btn" onclick="playEp('{{ ep.video_url }}', this)">S{{ ep.season }} E{{ ep.episode }}</div>
             {% endfor %}
@@ -215,17 +216,17 @@ DETAIL_HTML = CSS + """
         <p id="dl-msg" style="text-align:center; color:var(--main); margin-top:15px; font-weight:bold;"></p>
 
         <div class="com-section">
-            <h3>Discussion</h3>
+            <h3>Discussions</h3>
             <form action="/comment/{{ m._id }}" method="POST">
-                <input type="text" name="user" placeholder="Your Name" required>
-                <textarea name="text" rows="3" placeholder="Join the discussion..." required></textarea>
+                <input type="text" name="user" placeholder="Name" required>
+                <textarea name="text" rows="3" placeholder="Write comment..." required></textarea>
                 <button class="btn-main" style="width: auto; padding: 10px 30px; margin-top:10px;">Post</button>
             </form>
             {% for c in comments %}
             <div class="com-item">
                 <span class="com-user">{{ c.user }} <small style="float:right;">{{ c.date }}</small></span>
                 <div class="com-txt">{{ c.text }}</div>
-                <a href="/like_comment/{{ m._id }}/{{ c._id }}" class="com-like-link"><i class="fas fa-thumbs-up"></i> {{ c.likes or 0 }}</a>
+                <a href="/like_comment/{{ m._id }}/{{ c._id }}" class="com-like-btn"><i class="fas fa-thumbs-up"></i> {{ c.likes or 0 }}</a>
             </div>
             {% endfor %}
         </div>
@@ -241,10 +242,10 @@ DETAIL_HTML = CSS + """
     }
     let ads = 0;
     function dlHandle() {
-        if(!activeUrl) { alert("Select episode!"); return; }
+        if(!activeUrl) { alert("Select episode first!"); return; }
         if(ads < {{ s.ad_click_limit }}) {
             ads++;
-            document.getElementById('dl-msg').innerText = "Ads Opening... (" + ads + "/{{ s.ad_click_limit }})";
+            document.getElementById('dl-msg').innerText = "Ad Opening... (" + ads + "/{{ s.ad_click_limit }})";
             window.open("{{ s.ad_link }}", "_blank");
         } else {
             window.location.href = activeUrl.replace("/upload/", "/upload/fl_attachment/");
@@ -257,15 +258,15 @@ DETAIL_HTML = CSS + """
 ADMIN_HTML = CSS + """
 <nav class="nav"><a href="/admin" class="logo">ADMIN PANEL</a><div style="cursor:pointer; font-size:32px; color:var(--main); position:absolute; right:5%;" onclick="toggleMenu()">☰</div></nav>
 <div class="drw" id="drw">
-    <a href="/" style="background:var(--main);"><i class="fas fa-eye"></i> 👁️ View Site</a>
-    <span onclick="openSec('upBox')"><i class="fas fa-upload"></i> 📤 Upload Content</span>
-    <span onclick="openSec('epBox')"><i class="fas fa-plus-circle"></i> 🎞️ Add Episode</span>
-    <span onclick="openSec('manageBox')"><i class="fas fa-tasks"></i> 🎬 Manage Content</span>
-    <span onclick="openSec('ottBox')"><i class="fas fa-tv"></i> 📺 OTT Badges</span>
-    <span onclick="openSec('catBox')"><i class="fas fa-list"></i> 📂 Categories</span>
-    <span onclick="openSec('langBox')"><i class="fas fa-language"></i> 🌐 Languages</span>
-    <span onclick="openSec('setBox')"><i class="fas fa-cog"></i> ⚙️ Settings</span>
-    <a href="/logout" style="color:red;"><i class="fas fa-sign-out-alt"></i> 🔴 Logout</a>
+    <a href="/" style="background:var(--main);">👁️ View Site</a>
+    <span onclick="openSec('upBox')">📤 Upload Movie/Series</span>
+    <span onclick="openSec('epBox')">🎞️ Add Episode</span>
+    <span onclick="openSec('manageBox')">🎬 Manage Content</span>
+    <span onclick="openSec('ottBox')">📺 OTT Platforms</span>
+    <span onclick="openSec('catBox')">📂 Categories</span>
+    <span onclick="openSec('langBox')">🌐 Languages</span>
+    <span onclick="openSec('setBox')">⚙️ Settings</span>
+    <a href="/logout" style="color:red;">🔴 Logout</a>
 </div>
 
 <div class="container">
@@ -275,6 +276,7 @@ ADMIN_HTML = CSS + """
         <div class="stat-card"><b>{{ counts.episodes }}</b>Episodes</div>
     </div>
 
+    <!-- কন্টেন্ট আপলোড -->
     <div id="upBox" class="sec-box" style="display:block;">
         <h3>Upload Movie/Series</h3>
         <div style="display:flex; gap:10px;"><input type="text" id="tmdbQ"><button onclick="tmdbSearch()" class="btn-main" style="width:100px;">Search</button></div>
@@ -285,11 +287,12 @@ ADMIN_HTML = CSS + """
             <input type="text" name="poster" id="p" placeholder="Poster URL">
             <input type="text" name="backdrop" id="b" placeholder="Backdrop URL">
             <select name="type"><option value="movie">Movie</option><option value="series">Series</option></select>
+            <input type="text" name="manual_badge" placeholder="Poster Badge Text (e.g. HD, 4K, New)">
             <select name="language">
                 {% for l in languages %}<option value="{{ l.name }}">{{ l.name }}</option>{% endfor %}
             </select>
             <select name="ott">
-                <option value="">No OTT Badge</option>
+                <option value="">No OTT Label</option>
                 {% for o in otts %}<option value="{{ o.name }}">{{ o.name }}</option>{% endfor %}
             </select>
             <select name="category_id">
@@ -297,13 +300,14 @@ ADMIN_HTML = CSS + """
             </select>
             <input type="file" name="video_file" id="f_up" accept="video/mp4">
             <div class="progress-container" id="pCont"><div class="progress-bar" id="pBar">0%</div></div>
-            <button type="button" onclick="uploadContent()" class="btn-main" style="background:green;">SAVE</button>
+            <button type="button" onclick="uploadContent()" class="btn-main" style="background:green;">UPLOAD NOW</button>
         </form>
     </div>
 
+    <!-- এপিসোড আপলোড (সার্চ সহ) -->
     <div id="epBox" class="sec-box">
         <h3>Add Episode</h3>
-        <input type="text" id="sSch" placeholder="Search series..." onkeyup="findS()">
+        <input type="text" id="sSch" placeholder="🔍 Search series name..." onkeyup="findS()" style="border: 2px solid var(--main);">
         <form id="epFrm">
             <select name="series_id" id="sSel">
                 {% for m in movies if m.type == 'series' %}<option value="{{ m._id|string }}">{{ m.title }}</option>{% endfor %}
@@ -312,16 +316,17 @@ ADMIN_HTML = CSS + """
             <input type="number" name="episode" placeholder="Episode" required>
             <input type="file" name="video_file" id="f_ep" accept="video/mp4" required>
             <div class="progress-container" id="epPCont"><div class="progress-bar" id="epPBar">0%</div></div>
-            <button type="button" onclick="uploadEp()" class="btn-main" style="background:blue;">UPLOAD</button>
+            <button type="button" onclick="uploadEp()" class="btn-main" style="background:blue;">UPLOAD EPISODE</button>
         </form>
     </div>
 
+    <!-- ম্যানেজ কন্টেন্ট -->
     <div id="manageBox" class="sec-box">
-        <h3>Manage Content</h3>
+        <h3>🎬 All Content</h3>
         <div style="max-height: 400px; overflow-y: auto;">
         {% for m in movies %}
-        <div style="padding:10px; border-bottom:1px solid #222; display:flex; justify-content:space-between;">
-            <span>{{ m.title }}</span>
+        <div style="padding:10px; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
+            <span>{{ m.title }} (❤️ {{ m.likes or 0 }})</span>
             <a href="/del_movie/{{ m._id }}" style="color:red;" onclick="return confirm('Delete?')">DELETE</a>
         </div>
         {% endfor %}
@@ -329,32 +334,32 @@ ADMIN_HTML = CSS + """
     </div>
 
     <div id="ottBox" class="sec-box">
-        <h3>OTT Labels</h3>
+        <h3>📺 OTT Labels</h3>
         <form action="/add_ott" method="POST"><input type="text" name="name" required><button class="btn-main">Add</button></form>
         {% for o in otts %}<p>{{ o.name }} <a href="/del_ott/{{ o._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
     </div>
 
     <div id="catBox" class="sec-box">
-        <h3>Categories</h3>
+        <h3>📂 Categories</h3>
         <form action="/add_cat" method="POST"><input type="text" name="name" required><button class="btn-main">Add</button></form>
         {% for c in categories %}<p>{{ c.name }} <a href="/del_cat/{{ c._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
     </div>
 
     <div id="langBox" class="sec-box">
-        <h3>Languages</h3>
+        <h3>🌐 Languages</h3>
         <form action="/add_lang" method="POST"><input type="text" name="name" required><button class="btn-main">Add</button></form>
         {% for l in languages %}<p>{{ l.name }} <a href="/del_lang/{{ l._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
     </div>
 
     <div id="setBox" class="sec-box">
-        <h3>Settings</h3>
+        <h3>⚙️ Global Settings</h3>
         <form action="/update_settings" method="POST">
             <input type="text" name="site_name" value="{{ s.site_name }}">
             <input type="text" name="notice_text" value="{{ s.notice_text }}">
             <input type="text" name="notice_color" value="{{ s.notice_color }}">
             <input type="text" name="ad_link" value="{{ s.ad_link }}">
             <input type="number" name="ad_click_limit" value="{{ s.ad_click_limit }}">
-            <button class="btn-main">SAVE</button>
+            <button class="btn-main">SAVE SETTINGS</button>
         </form>
     </div>
 </div>
@@ -389,10 +394,10 @@ ADMIN_HTML = CSS + """
         xhr.upload.onprogress = (e) => {
             let p = Math.round((e.loaded / e.total) * 100);
             document.getElementById('pBar').style.width = p + '%';
-            document.getElementById('pBar').innerText = p + '%';
+            document.getElementById('pBar').innerText = p + '% Uploaded';
         };
         xhr.open("POST", "/add_content");
-        xhr.onload = () => { alert("Done!"); location.reload(); };
+        xhr.onload = () => { alert("Saved!"); location.reload(); };
         xhr.send(fd);
     }
     function uploadEp(){
@@ -402,10 +407,10 @@ ADMIN_HTML = CSS + """
         xhr.upload.onprogress = (e) => {
             let p = Math.round((e.loaded / e.total) * 100);
             document.getElementById('epPBar').style.width = p + '%';
-            document.getElementById('epPBar').innerText = p + '%';
+            document.getElementById('epPBar').innerText = p + '% Uploaded';
         };
         xhr.open("POST", "/add_episode");
-        xhr.onload = () => { alert("Episode Added!"); location.reload(); };
+        xhr.onload = () => { alert("Done!"); location.reload(); };
         xhr.send(fd);
     }
 </script>
@@ -477,7 +482,7 @@ def add_content():
             v_url = up['secure_url']
         os.remove(tf.name)
     movies_col.insert_one({
-        "title": request.form.get('title'), "year": request.form.get('year'), "poster": request.form.get('poster'), "backdrop": request.form.get('backdrop'), "type": request.form.get('type'), "language": request.form.get('language'), "ott": request.form.get('ott'), "category_id": str(request.form.get('category_id')), "video_url": v_url, "likes": 0
+        "title": request.form.get('title'), "year": request.form.get('year'), "poster": request.form.get('poster'), "backdrop": request.form.get('backdrop'), "type": request.form.get('type'), "manual_badge": request.form.get('manual_badge'), "language": request.form.get('language'), "ott": request.form.get('ott'), "category_id": str(request.form.get('category_id')), "video_url": v_url, "likes": 0
     })
     return "OK"
 
@@ -489,7 +494,7 @@ def add_episode():
         with tempfile.NamedTemporaryFile(delete=False) as tf:
             file.save(tf.name)
             up = cloudinary.uploader.upload_large(tf.name, resource_type="video", chunk_size=6000000)
-            episodes_col.insert_one({"series_id": request.form.get('series_id'), "season": int(request.form.get('season')), "episode": int(request.form.get('episode')), "video_url": up['secure_url']})
+            episodes_col.insert_one({"series_id": request.form.get('series_id'), "season": int(request.form.get('season')), "episode": int(request.form.get('episode')), "video_url": up['secure_url'], "likes": 0})
         os.remove(tf.name)
     return "OK"
 
@@ -514,7 +519,7 @@ def del_lang(id):
     return redirect('/admin')
 
 @app.route('/add_ott', methods=['POST'])
-def add_ott():
+def add_lang_ott():
     if session.get('auth'): ott_col.insert_one({"name": request.form.get('name')})
     return redirect('/admin')
 
