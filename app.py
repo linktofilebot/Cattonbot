@@ -11,7 +11,8 @@ import cloudinary.uploader
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "moviebox_premium_final_2026")
 
-# --- ডাটাবেস ও ক্লাউড সেটিংস (আপনার তথ্য এখানে বসান) ---
+# --- ডাটাবেস ও ক্লাউড সেটিংস ---
+# এগুলো আপনার অরিজিনাল ইউরি ও কী দিয়ে পরিবর্তন করুন
 MONGO_URI = os.environ.get("MONGO_URI", "your_mongodb_uri")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "your_tmdb_api_key")
 
@@ -27,7 +28,6 @@ try:
     db = client['moviebox_v5_db']
     movies_col = db['movies']
     categories_col = db['categories']
-    ott_col = db['ott_platforms']
     settings_col = db['settings']
 except Exception as e:
     print(f"DB Error: {e}")
@@ -51,104 +51,124 @@ def get_config():
         settings_col.insert_one(conf)
     return conf
 
-# --- প্রিমিয়াম CSS ডিজাইন (লাইটিং ইফেক্ট ও প্রোগ্রেস বার সহ) ---
+# --- প্রিমিয়াম CSS ডিজাইন ---
 CSS = """
 <style>
     :root { --main: #e50914; --bg: #050505; --card: #121212; --text: #ffffff; }
     * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
+    body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
     
-    /* লোগো গ্লোয়িং লাইটিং ইফেক্ট */
     .logo { 
-        color: var(--main); 
-        font-size: 28px; 
-        font-weight: bold; 
-        text-decoration: none; 
-        letter-spacing: 2px;
-        text-transform: uppercase;
-        animation: glow 1.5s ease-in-out infinite alternate;
+        color: var(--main); font-size: 26px; font-weight: bold; text-decoration: none; letter-spacing: 1px;
+        text-transform: uppercase; animation: glow 1.5s ease-in-out infinite alternate;
     }
     @keyframes glow {
-        from { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 15px var(--main), 0 0 20px var(--main); }
-        to { text-shadow: 0 0 10px #fff, 0 0 20px #ff4d4d, 0 0 30px #ff4d4d, 0 0 40px #ff4d4d; }
+        from { text-shadow: 0 0 5px var(--main); }
+        to { text-shadow: 0 0 15px var(--main); }
     }
 
-    .nav { background: rgba(0,0,0,0.95); padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--main); position: sticky; top: 0; z-index: 1000; }
+    .nav { background: rgba(0,0,0,0.95); padding: 10px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--main); position: sticky; top: 0; z-index: 1000; flex-wrap: wrap; gap: 10px; }
     .container { max-width: 1300px; margin: auto; padding: 15px; }
-    .btn { background: var(--main); color: #fff; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; text-decoration: none; font-weight: bold; display: inline-block; transition: 0.3s; text-align: center; }
+    
+    .search-box { position: relative; display: flex; align-items: center; background: #1a1a1a; border-radius: 20px; padding: 5px 15px; border: 1px solid #333; width: 300px; }
+    .search-box input { background: transparent; border: none; color: #fff; padding: 5px; width: 100%; font-size: 14px; }
+
+    .btn { background: var(--main); color: #fff; border: none; padding: 8px 18px; border-radius: 5px; cursor: pointer; text-decoration: none; font-weight: bold; transition: 0.3s; display: inline-block; }
     .btn:hover { opacity: 0.8; transform: scale(1.05); }
 
-    /* মুভি কার্ড ডিজাইন */
-    .cat-title { border-left: 5px solid var(--main); padding-left: 12px; margin: 35px 0 15px; font-size: 22px; font-weight: bold; text-transform: uppercase; color: #fff; }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
-    @media (max-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; } }
-    .card { background: var(--card); border-radius: 10px; overflow: hidden; border: 1px solid #222; text-decoration: none; color: #fff; position: relative; transition: 0.4s; }
-    .card:hover { border-color: var(--main); transform: translateY(-5px); box-shadow: 0 5px 15px rgba(229, 9, 20, 0.3); }
-    .card img { width: 100%; height: 260px; object-fit: cover; }
-    @media (max-width: 600px) { .card img { height: 170px; } }
-    .ott-badge { position: absolute; top: 8px; left: 8px; width: 30px; height: 30px; background: rgba(0,0,0,0.7); padding: 4px; border-radius: 6px; z-index: 10; }
+    .cat-title { border-left: 5px solid var(--main); padding-left: 12px; margin: 30px 0 15px; font-size: 20px; font-weight: bold; text-transform: uppercase; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; }
+    @media (max-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; } }
+    
+    .card { background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid #222; text-decoration: none; color: #fff; position: relative; transition: 0.4s; }
+    .card:hover { border-color: var(--main); transform: translateY(-5px); }
+    .card img { width: 100%; height: 250px; object-fit: cover; }
+    @media (max-width: 600px) { .card img { height: 165px; } }
 
-    /* প্রোগ্রেস বার স্টাইল */
-    .progress-container { width: 100%; background: #222; border-radius: 10px; margin: 20px 0; display: none; overflow: hidden; }
-    .progress-bar { width: 0%; height: 20px; background: linear-gradient(90deg, #e50914, #ff4d4d); text-align: center; line-height: 20px; color: white; font-size: 12px; transition: width 0.3s; }
+    .video-container video { width: 100%; border-radius: 10px; border: 1px solid #333; aspect-ratio: 16/9; background: #000; }
+    .progress-container { width: 100%; background: #222; border-radius: 10px; margin: 15px 0; display: none; }
+    .progress-bar { width: 0%; height: 15px; background: var(--main); border-radius: 10px; text-align: center; font-size: 10px; line-height: 15px; color: #fff; }
 
-    /* এডমিন প্যানেল */
-    .menu-btn { font-size: 32px; cursor: pointer; color: var(--main); }
-    .admin-drawer { position: fixed; top: 75px; right: 5%; background: #181818; border: 1px solid #333; border-radius: 8px; display: none; flex-direction: column; z-index: 3000; width: 260px; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
-    .admin-drawer span, .admin-drawer a { padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #252525; font-weight: 600; text-decoration: none; color: #fff; }
-    .admin-drawer span:hover { background: #252525; color: var(--main); }
-    .section-box { display: none; background: #111; padding: 25px; border-radius: 12px; border: 1px solid #222; margin-top: 20px; }
-    input, select, textarea { width: 100%; padding: 12px; margin: 10px 0; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 6px; }
+    .admin-drawer { position: fixed; top: 70px; right: 5%; background: #181818; border: 1px solid #333; border-radius: 8px; display: none; flex-direction: column; z-index: 3000; width: 250px; }
+    .admin-drawer a, .admin-drawer span { padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #252525; text-decoration: none; color: #fff; }
+    .section-box { display: none; background: #111; padding: 20px; border-radius: 10px; border: 1px solid #222; margin-top: 20px; }
+    input, select, textarea { width: 100%; padding: 10px; margin: 8px 0; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 5px; }
 </style>
 """
 
 # --- টেম্পলেটসমূহ ---
 
-# ১. হোমপেজ
 HOME_HTML = CSS + """
 <nav class="nav">
     <a href="/" class="logo">{{ s.site_name }}</a>
+    <form action="/" method="GET" class="search-box">
+        <input type="text" name="q" placeholder="Search movies..." value="{{ query or '' }}">
+        <button type="submit" style="background:none; border:none; color:#aaa; cursor:pointer;">🔍</button>
+    </form>
     <a href="/admin" class="btn">ADMIN</a>
 </nav>
-{{ s.social_bar|safe }}
+
 <div class="container">
-    {% for cat in categories %}
-    <div class="cat-title">{{ cat.name }}</div>
-    <div class="grid">
-        {% for m in movies if m.category_id == cat._id|string %}
-        <a href="/movie/{{ m._id }}" class="card">
-            {% if m.ott_logo %}<img src="{{ m.ott_logo }}" class="ott-badge">{% endif %}
-            <img src="{{ m.poster }}" loading="lazy">
-            <div style="padding:10px; text-align:center; font-size:14px; font-weight:bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ m.title }}</div>
-        </a>
+    {% if query %}
+        <h3 class="cat-title">Search Results for: {{ query }}</h3>
+        <div class="grid">
+            {% for m in movies %}
+            <a href="/movie/{{ m._id }}" class="card">
+                <img src="{{ m.poster }}" loading="lazy">
+                <div style="padding:10px; text-align:center; font-size:13px;">{{ m.title }}</div>
+            </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- ক্যাটাগরি অনুযায়ী মুভি -->
+        {% for cat in categories %}
+            {% set cat_id_str = cat._id|string %}
+            <div class="cat-title">{{ cat.name }}</div>
+            <div class="grid">
+                {% for m in movies %}
+                    {% if m.category_id == cat_id_str %}
+                    <a href="/movie/{{ m._id }}" class="card">
+                        <img src="{{ m.poster }}" loading="lazy">
+                        <div style="padding:10px; text-align:center; font-size:13px;">{{ m.title }}</div>
+                    </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
         {% endfor %}
-    </div>
-    {% endfor %}
+        
+        <!-- যদি কোনো ক্যাটাগরি না থাকে বা সব মুভি একসাথে দেখাতে চান -->
+        <div class="cat-title">Recently Added</div>
+        <div class="grid">
+            {% for m in movies %}
+            <a href="/movie/{{ m._id }}" class="card">
+                <img src="{{ m.poster }}" loading="lazy">
+                <div style="padding:10px; text-align:center; font-size:13px;">{{ m.title }}</div>
+            </a>
+            {% endfor %}
+        </div>
+    {% endif %}
 </div>
-<div class="ad-slot">{{ s.native|safe }}</div>
 {{ s.popunder|safe }}
 """
 
-# ২. ডিটেইলস পেজ
 DETAIL_HTML = CSS + """
-<nav class="nav">
-    <a href="/" class="logo">{{ s.site_name }}</a>
-    <a href="/" class="btn">HOME</a>
-</nav>
+<nav class="nav"><a href="/" class="logo">{{ s.site_name }}</a><a href="/" class="btn">HOME</a></nav>
 <div style="background: url('{{ m.backdrop }}') center/cover; position: fixed; top:0; left:0; width:100%; height:100vh; filter: blur(25px) brightness(0.2); z-index:-1;"></div>
 <div class="container">
-    <div style="display: flex; flex-wrap: wrap; gap: 40px; margin-top: 80px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 30px; margin-top: 50px;">
         <div style="flex: 1; min-width: 300px;">
-            <img src="{{ m.poster }}" style="width:100%; border-radius:15px; border: 3px solid var(--main); box-shadow: 0 0 20px rgba(229, 9, 20, 0.5);">
-            <button onclick="dlHandle()" class="btn" style="width:100%; margin-top:20px; height:60px; font-size:20px;">DOWNLOAD NOW</button>
-            <p id="msg" style="color:var(--main); text-align:center; margin-top:10px; font-weight:bold;"></p>
+            <img src="{{ m.poster }}" style="width:100%; border-radius:12px; border: 2px solid var(--main);">
+            <button onclick="dlHandle()" class="btn" style="width:100%; margin-top:20px; height:55px; font-size:18px;">DOWNLOAD NOW</button>
+            <p id="msg" style="color:var(--main); text-align:center; margin-top:10px;"></p>
         </div>
         <div style="flex: 2; min-width: 350px;">
-            <h1 style="font-size:40px; margin-bottom:15px;">{{ m.title }} ({{ m.year }})</h1>
-            <video controls preload="metadata" style="width:100%; border-radius:12px; border:1px solid #444; background:#000;">
-                <source src="{{ m.video_url }}" type="video/mp4">
-            </video>
-            <div style="margin-top:25px;">{{ s.native|safe }}</div>
+            <h1 style="font-size:35px; margin-bottom:10px;">{{ m.title }} ({{ m.year }})</h1>
+            <div class="video-container">
+                <video controls controlsList="nodownload" poster="{{ m.backdrop }}">
+                    <source src="{{ m.video_url }}" type="video/mp4">
+                </video>
+            </div>
+            <div style="margin-top:20px;">{{ s.native|safe }}</div>
         </div>
     </div>
 </div>
@@ -157,132 +177,92 @@ DETAIL_HTML = CSS + """
     function dlHandle() {
         if(clicks < {{ s.ad_click_limit }}) {
             clicks++;
-            document.getElementById('msg').innerText = "Unlocking Link... Ad " + clicks + "/{{ s.ad_click_limit }}";
+            document.getElementById('msg').innerText = "Redirecting... (" + clicks + "/{{ s.ad_click_limit }})";
             window.open("{{ s.ad_link }}", "_blank");
         } else {
             window.location.href = "{{ s.download_url }}";
         }
     }
 </script>
-{{ s.popunder|safe }}
 """
 
-# ৩. এডমিন প্যানেল (প্রোগ্রেস বার ও সেটিংস সহ)
 ADMIN_HTML = CSS + """
 <nav class="nav">
-    <a href="/admin" class="logo">ADMIN CONTROL</a>
-    <div class="menu-btn" onclick="toggleMenu()">⋮</div>
+    <a href="/admin" class="logo">ADMIN PANEL</a>
+    <div style="cursor:pointer; font-size:24px;" onclick="toggleMenu()">☰</div>
 </nav>
 
 <div class="admin-drawer" id="drawer">
-    <span onclick="openSec('upBox')">Upload Content</span>
+    <span onclick="openSec('upBox')">Upload Movie</span>
     <span onclick="openSec('manageBox')">Manage Movies</span>
     <span onclick="openSec('catBox')">Categories</span>
-    <span onclick="openSec('ottBox')">OTT Platforms</span>
-    <span onclick="openSec('setBox')">Site Settings</span>
-    <a href="/logout" style="color: red;">Logout</a>
+    <span onclick="openSec('setBox')">Settings</span>
+    <a href="/logout" style="color:red;">Logout</a>
 </div>
 
 <div class="container">
-    <!-- আপলোড সেকশন -->
     <div id="upBox" class="section-box" style="display:block;">
-        <h3>Upload New Movie</h3>
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <input type="text" id="tmdbQ" placeholder="Search Movie Name...">
-            <button class="btn" onclick="tmdbSearch()">Search</button>
-        </div>
-        <div id="tmdbRes" style="display:flex; overflow-x:auto; gap:10px; margin-bottom:20px;"></div>
-        
+        <h3>Upload Movie</h3>
+        <input type="text" id="tmdbQ" placeholder="Search TMDB..."><button class="btn" onclick="tmdbSearch()">Search</button>
+        <div id="tmdbRes" style="display:flex; gap:10px; overflow-x:auto; margin:10px 0;"></div>
         <form id="uploadForm">
-            <input type="text" name="title" id="t" placeholder="Movie Title" required>
+            <input type="text" name="title" id="t" placeholder="Title" required>
             <input type="text" name="year" id="y" placeholder="Year">
             <input type="text" name="poster" id="p" placeholder="Poster URL">
             <input type="text" name="backdrop" id="b" placeholder="Backdrop URL">
-            <select name="category_id" required>
-                <option value="">Select Category</option>
+            <select name="category_id">
                 {% for c in categories %}<option value="{{ c._id }}">{{ c.name }}</option>{% endfor %}
             </select>
-            <select name="ott_id">
-                <option value="">Select OTT Platform</option>
-                {% for o in otts %}<option value="{{ o._id }}">{{ o.name }}</option>{% endfor %}
-            </select>
-            <label>Select Video File (MP4):</label>
-            <input type="file" name="video_file" id="video_file" accept="video/mp4" required>
-            
-            <div class="progress-container" id="pContainer">
-                <div class="progress-bar" id="pBar">0%</div>
-            </div>
-            <p id="upStatus" style="text-align:center; font-size:14px; color:var(--main);"></p>
-
-            <button type="button" id="upBtn" onclick="submitContent()" class="btn" style="width:100%; background:green; margin-top:10px;">START UPLOAD</button>
+            <input type="file" name="video_file" id="v_file" accept="video/mp4" required>
+            <div class="progress-container" id="pCont"><div class="progress-bar" id="pBar">0%</div></div>
+            <button type="button" id="upBtn" onclick="submitContent()" class="btn" style="width:100%;">UPLOAD</button>
         </form>
     </div>
 
-    <!-- মুভি লিস্ট ম্যানেজ -->
     <div id="manageBox" class="section-box">
-        <h3>Manage Movies</h3>
-        <div style="max-height: 500px; overflow-y: auto;">
-        {% for m in movies %}
-        <div style="display:flex; justify-content:space-between; padding:12px; border-bottom:1px solid #222; align-items:center;">
-            <span>{{ m.title }} ({{ m.year }})</span>
-            <a href="/del_movie/{{ m._id }}" style="color:red; text-decoration:none; font-weight:bold;" onclick="return confirm('Delete this movie?')">Delete</a>
-        </div>
-        {% endfor %}
+        <h3>Manage Movies ({{ total_movies }})</h3>
+        <input type="text" id="admS" onkeyup="filterM()" placeholder="Quick search...">
+        <div style="max-height:400px; overflow-y:auto;">
+            {% for m in movies %}
+            <div class="m-item" style="padding:10px; border-bottom:1px solid #222; display:flex; justify-content:space-between;">
+                <span>{{ m.title }}</span>
+                <a href="/del_movie/{{ m._id }}" style="color:red;" onclick="return confirm('Delete?')">Delete</a>
+            </div>
+            {% endfor %}
         </div>
     </div>
-
-    <!-- সেটিংস সেকশন -->
-    <div id="setBox" class="section-box">
-        <h3>Global Site Settings</h3>
-        <form action="/update_settings" method="POST">
-            <label>Site Name (Displayed with Lighting Effect):</label>
-            <input type="text" name="site_name" value="{{ s.site_name }}" required>
-            
-            <label>Ad & Download Settings:</label>
-            <input type="text" name="download_url" value="{{ s.download_url }}" placeholder="Final Download Link">
-            <input type="text" name="ad_link" value="{{ s.ad_link }}" placeholder="Ad Link">
-            <input type="number" name="ad_click_limit" value="{{ s.ad_click_limit }}" placeholder="Ad Clicks">
-            
-            <label>Ad Scripts:</label>
-            <textarea name="popunder" rows="3" placeholder="Popunder Script">{{ s.popunder }}</textarea>
-            <textarea name="native" rows="3" placeholder="Native/Banner Script">{{ s.native }}</textarea>
-            <textarea name="social_bar" rows="3" placeholder="Social Bar Script">{{ s.social_bar }}</textarea>
-            
-            <button class="btn" style="width:100%;">UPDATE SETTINGS</button>
-        </form>
-    </div>
-
-    <!-- ক্যাটাগরি সেকশন -->
+    
     <div id="catBox" class="section-box">
         <h3>Categories</h3>
-        <form action="/add_cat" method="POST" style="display:flex; gap:10px;">
-            <input type="text" name="name" placeholder="Cat Name" required>
-            <input type="number" name="order" placeholder="Order" required>
-            <button class="btn">Add</button>
+        <form action="/add_cat" method="POST"><input type="text" name="name" placeholder="Cat Name"><button class="btn">Add</button></form>
+        {% for c in categories %}<p>{{ c.name }} <a href="/del_cat/{{ c._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
+    </div>
+
+    <div id="setBox" class="section-box">
+        <h3>Settings</h3>
+        <form action="/update_settings" method="POST">
+            <input type="text" name="site_name" value="{{ s.site_name }}">
+            <input type="text" name="download_url" value="{{ s.download_url }}">
+            <input type="text" name="ad_link" value="{{ s.ad_link }}">
+            <input type="number" name="ad_click_limit" value="{{ s.ad_click_limit }}">
+            <button class="btn">Save</button>
         </form>
-        {% for c in categories %}
-        <div style="padding:10px; border-bottom:1px solid #333;">{{ c.name }} <a href="/del_cat/{{ c._id }}" style="color:red; float:right;">Delete</a></div>
-        {% endfor %}
     </div>
 </div>
 
 <script>
     function toggleMenu() { let d = document.getElementById('drawer'); d.style.display = (d.style.display == 'flex') ? 'none' : 'flex'; }
-    function openSec(id) {
-        document.querySelectorAll('.section-box').forEach(b => b.style.display = 'none');
-        document.getElementById(id).style.display = 'block';
-        toggleMenu();
-    }
-
+    function openSec(id) { document.querySelectorAll('.section-box').forEach(b => b.style.display = 'none'); document.getElementById(id).style.display = 'block'; toggleMenu(); }
+    
     async function tmdbSearch(){
         let q = document.getElementById('tmdbQ').value;
         let r = await fetch(`/api/tmdb?q=${q}`);
         let d = await r.json();
         let resDiv = document.getElementById('tmdbRes'); resDiv.innerHTML = '';
-        d.results.slice(0,6).forEach(i => {
+        d.results.slice(0,5).forEach(i => {
             let img = document.createElement('img');
             img.src = "https://image.tmdb.org/t/p/w92"+i.poster_path;
-            img.style.cursor="pointer"; img.style.borderRadius="6px";
+            img.style.height = "100px"; img.style.cursor="pointer";
             img.onclick = () => {
                 document.getElementById('t').value = i.title || i.name;
                 document.getElementById('y').value = (i.release_date || i.first_air_date || '').split('-')[0];
@@ -294,64 +274,59 @@ ADMIN_HTML = CSS + """
     }
 
     function submitContent(){
-        let form = document.getElementById('uploadForm');
-        let fd = new FormData(form);
+        let fd = new FormData(document.getElementById('uploadForm'));
         let xhr = new XMLHttpRequest();
-
-        // প্রোগ্রেস বার দেখানো
-        document.getElementById('pContainer').style.display = 'block';
+        document.getElementById('pCont').style.display = 'block';
         document.getElementById('upBtn').disabled = true;
-        document.getElementById('upStatus').innerText = "Uploading to server...";
-
-        // আপলোড প্রোগ্রেস ট্র্যাক
-        xhr.upload.addEventListener("progress", function(e) {
-            if (e.lengthComputable) {
-                let percent = Math.round((e.loaded / e.total) * 100);
-                document.getElementById('pBar').style.width = percent + "%";
-                document.getElementById('pBar').innerText = percent + "%";
-                if(percent === 100) {
-                    document.getElementById('upStatus').innerText = "Processing & Saving (Please wait)...";
-                }
-            }
-        });
-
-        xhr.open("POST", "/add_content");
-        xhr.onload = () => {
-            if(xhr.status == 200) {
-                alert("Upload Successful!");
-                location.reload();
-            } else {
-                alert("Upload Failed!");
-                document.getElementById('upBtn').disabled = false;
-            }
+        xhr.upload.onprogress = (e) => {
+            let p = Math.round((e.loaded / e.total) * 100);
+            document.getElementById('pBar').style.width = p + '%';
+            document.getElementById('pBar').innerText = p + '%';
         };
+        xhr.open("POST", "/add_content");
+        xhr.onload = () => { alert("Success!"); location.reload(); };
         xhr.send(fd);
     }
 </script>
 """
 
-# --- সার্ভার সাইড লজিক/রাউটস ---
+# --- রাউটস ---
 
 @app.route('/')
 def index():
-    return render_template_string(HOME_HTML, categories=list(categories_col.find().sort("order", 1)), movies=list(movies_col.find()), s=get_config())
+    query = request.args.get('q')
+    categories = list(categories_col.find().sort("order", 1))
+    if query:
+        movies = list(movies_col.find({"title": {"$regex": query, "$options": "i"}}).sort("_id", -1))
+    else:
+        movies = list(movies_col.find().sort("_id", -1))
+    
+    return render_template_string(HOME_HTML, categories=categories, movies=movies, query=query, s=get_config())
 
 @app.route('/movie/<id>')
 def movie_detail(id):
-    return render_template_string(DETAIL_HTML, m=movies_col.find_one({"_id": ObjectId(id)}), s=get_config())
+    m = movies_col.find_one({"_id": ObjectId(id)})
+    if not m: return redirect('/')
+    return render_template_string(DETAIL_HTML, m=m, s=get_config())
 
 @app.route('/admin')
 def admin():
     if not session.get('auth'):
-        return render_template_string(CSS + """<div class="container"><form action="/login" method="POST" class="section-box" style="display:block; max-width:320px; margin:100px auto;"><h2>Admin Login</h2><input type="text" name="u" placeholder="Username"><input type="password" name="p" placeholder="Password"><button class="btn" style="width:100%">LOGIN</button></form></div>""")
-    return render_template_string(ADMIN_HTML, categories=list(categories_col.find().sort("order",1)), otts=list(ott_col.find()), movies=list(movies_col.find().sort("_id", -1)), s=get_config())
+        return render_template_string(CSS + """<div class="container"><form action="/login" method="POST" class="section-box" style="display:block; max-width:320px; margin:100px auto;"><h2>Login</h2><input type="text" name="u" placeholder="Admin"><input type="password" name="p" placeholder="Pass"><button class="btn" style="width:100%">LOGIN</button></form></div>""")
+    
+    all_movies = list(movies_col.find().sort("_id", -1))
+    return render_template_string(ADMIN_HTML, 
+        categories=list(categories_col.find()), 
+        movies=all_movies, 
+        total_movies=len(all_movies), 
+        s=get_config())
 
 @app.route('/login', methods=['POST'])
 def login():
     if request.form['u'] == ADMIN_USER and request.form['p'] == ADMIN_PASS:
         session['auth'] = True
         return redirect('/admin')
-    return "Invalid Credentials"
+    return "Login Failed"
 
 @app.route('/logout')
 def logout():
@@ -362,33 +337,37 @@ def logout():
 def add_content():
     if not session.get('auth'): return "Unauthorized", 401
     file = request.files.get('video_file')
-    if file:
-        with tempfile.NamedTemporaryFile(delete=False) as tf:
-            file.save(tf.name)
-            # ক্লাউডিনারিতে আপলোড (বড় ফাইলের জন্য upload_large)
-            up = cloudinary.uploader.upload_large(tf.name, resource_type="video", chunk_size=6000000)
-        os.remove(tf.name)
-        
-        ott_logo = ""
-        if request.form.get('ott_id'):
-            ott = ott_col.find_one({"_id": ObjectId(request.form.get('ott_id'))})
-            if ott: ott_logo = ott['logo']
+    if not file: return "No file", 400
+    
+    with tempfile.NamedTemporaryFile(delete=False) as tf:
+        file.save(tf.name)
+        up = cloudinary.uploader.upload_large(tf.name, resource_type="video")
+    os.remove(tf.name)
+    
+    movies_col.insert_one({
+        "title": request.form.get('title'),
+        "year": request.form.get('year'),
+        "poster": request.form.get('poster'),
+        "backdrop": request.form.get('backdrop'),
+        "category_id": str(request.form.get('category_id')), # ID টি স্ট্রিং হিসেবে সেভ করছি
+        "video_url": up['secure_url']
+    })
+    return "OK"
 
-        movies_col.insert_one({
-            "title": request.form.get('title'),
-            "year": request.form.get('year'),
-            "poster": request.form.get('poster'),
-            "backdrop": request.form.get('backdrop'),
-            "category_id": request.form.get('category_id'),
-            "ott_logo": ott_logo,
-            "video_url": up['secure_url']
-        })
-        return "OK"
-    return "Fail", 400
+@app.route('/add_cat', methods=['POST'])
+def add_cat():
+    if session.get('auth'):
+        categories_col.insert_one({"name": request.form.get('name'), "order": 0})
+    return redirect('/admin')
 
 @app.route('/del_movie/<id>')
 def del_movie(id):
     if session.get('auth'): movies_col.delete_one({"_id": ObjectId(id)})
+    return redirect('/admin')
+
+@app.route('/del_cat/<id>')
+def del_cat(id):
+    if session.get('auth'): categories_col.delete_one({"_id": ObjectId(id)})
     return redirect('/admin')
 
 @app.route('/update_settings', methods=['POST'])
@@ -398,27 +377,15 @@ def update_settings():
             "site_name": request.form.get('site_name'),
             "download_url": request.form.get('download_url'),
             "ad_link": request.form.get('ad_link'),
-            "ad_click_limit": int(request.form.get('ad_click_limit', 0)),
-            "popunder": request.form.get('popunder'),
-            "native": request.form.get('native'),
-            "social_bar": request.form.get('social_bar')
+            "ad_click_limit": int(request.form.get('ad_click_limit', 0))
         }})
-    return redirect('/admin')
-
-@app.route('/add_cat', methods=['POST'])
-def add_cat():
-    if session.get('auth'): categories_col.insert_one({"name": request.form.get('name'), "order": int(request.form.get('order', 0))})
-    return redirect('/admin')
-
-@app.route('/del_cat/<id>')
-def del_cat(id):
-    if session.get('auth'): categories_col.delete_one({"_id": ObjectId(id)})
     return redirect('/admin')
 
 @app.route('/api/tmdb')
 def tmdb():
     q = request.args.get('q')
-    return jsonify(requests.get(f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={q}").json())
+    res = requests.get(f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={q}")
+    return jsonify(res.json())
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+    app.run(host='0.0.0.0', port=5000, debug=True)
