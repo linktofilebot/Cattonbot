@@ -13,8 +13,8 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "moviebox_ultra_premium_master_2026")
 
 # --- ডাটাবেস ও ক্লাউড সেটিংস (আপনার তথ্যগুলো এখানে দিন) ---
-MONGO_URI = os.environ.get("MONGO_URI", "your_mongodb_uri")
-TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "your_tmdb_api_key")
+MONGO_URI = os.environ.get("MONGO_URI", "mongodb+srv://Demo270:Demo270@cluster0.ls1igsg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "7dc544d9253bccc3cfecc1c677f69819")
 
 cloudinary.config( 
   cloud_name = os.environ.get("CLOUDINARY_NAME", "dck0nrnt2"), 
