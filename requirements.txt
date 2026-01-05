@@ -1,4 +1,5 @@
 flask
 pymongo
 dnspython
+cloudinary
 gunicorn
