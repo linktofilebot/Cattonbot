@@ -16,7 +16,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "moviebox_ultra_premium_master_202
 
 MONGO_URI = "mongodb+srv://Demo270:Demo270@cluster0.ls1igsg.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
 TMDB_API_KEY = "7dc544d9253bccc3cfecc1c677f69819"
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "") # রেন্ডারে এনভায়রনমেন্ট ভেরিয়েবল দিন
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8589295170:AAHSsqlS6Zp_c-xsIAqZOv6zNiU2m_U6cro") # রেন্ডারে এনভায়রনমেন্ট ভেরিয়েবল দিন
 
 cloudinary.config( 
   cloud_name = "dck0nrnt2", 
