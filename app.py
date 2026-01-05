@@ -22,7 +22,7 @@ cloudinary.config(
   api_secret = os.environ.get("CLOUDINARY_API_SECRET", "a7y3o299JJqLfxmj9rLMK3hNbcg") 
 )
 
-# MongoDB কানেকশন
+# MongoDB কানেকশন ও কালেকশনস
 try:
     client = MongoClient(MONGO_URI)
     db = client['moviebox_v5_db']
@@ -59,7 +59,7 @@ def get_config():
         settings_col.insert_one(conf)
     return conf
 
-# --- প্রিমিয়াম রেসপন্সিভ CSS (সব ফিচার সম্বলিত) ---
+# --- প্রিমিয়াম রেসপন্সিভ CSS ---
 CSS = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -68,7 +68,7 @@ CSS = """
     * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
     
-    /* রেইনবো লোগো ও নেভিগেশন */
+    /* লোগো ও নেভিগেশন */
     .nav { background: rgba(0,0,0,0.96); padding: 15px; display: flex; justify-content: center; align-items: center; border-bottom: 2px solid var(--main); position: sticky; top: 0; z-index: 1000; }
     .logo { 
         font-size: clamp(22px, 6vw, 30px); font-weight: bold; text-decoration: none; text-transform: uppercase; 
@@ -80,8 +80,6 @@ CSS = """
     .back-btn { position: absolute; left: 15px; color: #fff; font-size: 22px; cursor: pointer; text-decoration: none; }
 
     .container { max-width: 1400px; margin: auto; padding: 15px; }
-
-    /* এড স্লট */
     .ad-slot { text-align: center; margin: 15px 0; width: 100%; overflow: hidden; }
 
     .notice-bar { width: 100%; padding: 12px; margin-bottom: 20px; background: #111; border: 1px dashed #444; border-radius: 8px; text-align: center; font-weight: bold; font-size: 14px; }
@@ -93,17 +91,15 @@ CSS = """
     .ott-slider::-webkit-scrollbar { display: none; }
     .ott-circle { flex: 0 0 auto; text-align: center; width: 75px; text-decoration: none; }
     .ott-circle img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #333; transition: 0.3s; }
-    .ott-circle:hover img { border-color: var(--main); transform: scale(1.05); }
     .ott-circle span { display: block; font-size: 10px; color: #fff; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
     /* Horizontal Card Slider */
-    .h-slider { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 15px; scrollbar-width: none; }
+    .h-slider { display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
     .h-slider::-webkit-scrollbar { display: none; }
     .h-slider .card { flex: 0 0 140px; }
     @media (min-width: 600px) { .h-slider .card { flex: 0 0 190px; } }
 
     .cat-title { border-left: 5px solid var(--main); padding-left: 12px; margin: 30px 0 15px; font-size: 20px; font-weight: bold; text-transform: uppercase; }
-    
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
     @media (min-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 22px; } }
     
@@ -113,11 +109,11 @@ CSS = """
     .badge-ott { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.85); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: bold; z-index: 5; border: 1px solid #444; }
     .card-title { padding: 10px; text-align: center; font-size: 13px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
 
-    /* প্লেয়ার ও এপিসোড */
+    /* প্লেয়ার ও ইপিসোড বাটন */
     video { width: 100%; border-radius: 12px; background: #000; aspect-ratio: 16/9; box-shadow: 0 0 20px rgba(0,0,0,0.6); }
     .ep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin: 20px 0; }
-    .ep-btn { background: #1a1a1a; color: #fff; padding: 15px 10px; text-align: center; border-radius: 6px; cursor: pointer; border: 1px solid #333; font-size: 12px; font-weight: bold; transition: 0.3s; }
-    .ep-btn.active { background: var(--main); border-color: var(--main); box-shadow: 0 0 10px var(--main); }
+    .ep-btn { background: #1a1a1a; color: #fff; padding: 12px; text-align: center; border-radius: 6px; cursor: pointer; border: 1px solid #333; font-size: 12px; font-weight: bold; transition: 0.3s; }
+    .ep-btn.active { background: var(--main); border-color: var(--main); box-shadow: 0 0 10px rgba(229,9,20,0.5); }
 
     .btn-main { background: var(--main); color: #fff; border: none; padding: 14px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; text-align: center; display: inline-block; font-size: 16px; text-decoration: none; }
     
@@ -150,6 +146,7 @@ HOME_HTML = CSS + """
         <button type="submit" style="background:none; border:none; color:#888;"><i class="fas fa-search"></i></button>
     </form>
 
+    <!-- OTT স্লাইডার -->
     <div class="ott-slider">
         {% for o in otts %}
         <a href="/?q={{ o.name }}" class="ott-circle">
@@ -225,6 +222,7 @@ DETAIL_HTML = CSS + """
 <div class="container">
     <div class="ad-slot">{{ s.banner_ad|safe }}</div>
     <div style="max-width: 950px; margin: auto;">
+        
         <video id="vBox" controls poster="{{ m.backdrop }}">
             {% if m.type == 'movie' %}
                 <source src="{{ m.video_url }}" type="video/mp4">
@@ -246,7 +244,8 @@ DETAIL_HTML = CSS + """
         </div>
         {% endif %}
 
-        <h1 style="margin-top:20px; font-size:28px;">{{ m.title }} ({{ m.year }}) <span style="font-size:14px; color:var(--main);">[{{ m.language }}]</span></h1>
+        <h1 style="margin-top:20px; font-size:28px;">{{ m.title }} ({{ m.year }})</h1>
+        <div style="margin: 10px 0; color: #ccc;">Language: {{ m.language }} | OTT: {{ m.ott }}</div>
         
         <button onclick="dlHandle()" class="btn-main" style="height:65px; font-size:22px; margin-top:15px;">📥 DOWNLOAD NOW</button>
         <p id="dl-msg" style="text-align:center; color:var(--main); margin-top:15px; font-weight:bold;"></p>
@@ -254,7 +253,7 @@ DETAIL_HTML = CSS + """
         <div style="background:#0f0f0f; padding:20px; border-radius:12px; margin-top:35px; border:1px solid #222;">
             <h3>Discussions</h3>
             <form action="/comment/{{ m._id }}" method="POST">
-                <input type="text" name="user" placeholder="Your Name" required>
+                <input type="text" name="user" placeholder="Name" required>
                 <textarea name="text" rows="3" placeholder="Write a comment..." required></textarea>
                 <button class="btn-main" style="width: auto; padding: 10px 30px; margin-top:10px;">Post</button>
             </form>
@@ -301,7 +300,8 @@ ADMIN_HTML = CSS + """
     <span onclick="openSec('adBox')"><i class="fas fa-ad"></i> 💰 Ads Management</span>
     <span onclick="openSec('ottBox')"><i class="fas fa-tv"></i> 📺 OTT Platforms</span>
     <span onclick="openSec('catBox')"><i class="fas fa-list"></i> 📂 Categories</span>
-    <span onclick="openSec('setBox')"><i class="fas fa-cog"></i> ⚙️ Settings</span>
+    <span onclick="openSec('langBox')"><i class="fas fa-language"></i> 🌐 Languages</span>
+    <span onclick="openSec('setBox')"><i class="fas fa-cog"></i> ⚙️ General Settings</span>
     <a href="/logout" style="color:red;"><i class="fas fa-sign-out-alt"></i> 🔴 Logout</a>
 </div>
 
@@ -320,7 +320,7 @@ ADMIN_HTML = CSS + """
             <label>Site Name</label><input type="text" name="site_name" value="{{ s.site_name }}">
             <label>Notice Text</label><input type="text" name="notice_text" value="{{ s.notice_text }}">
             <label>Notice Color (Hex)</label><input type="text" name="notice_color" value="{{ s.notice_color }}">
-            <label>Download/Direct Link</label><input type="text" name="ad_link" value="{{ s.ad_link }}">
+            <label>Direct Download Link</label><input type="text" name="ad_link" value="{{ s.ad_link }}">
             <button class="btn-main">SAVE SETTINGS</button>
         </form>
     </div>
@@ -331,14 +331,14 @@ ADMIN_HTML = CSS + """
         <form action="/update_settings" method="POST">
             <input type="hidden" name="form_type" value="ads">
             <label>Popunder Ad Code</label><textarea name="popunder" rows="4">{{ s.popunder }}</textarea>
-            <label>Banner Ad Code (Top)</label><textarea name="banner_ad" rows="4">{{ s.banner_ad }}</textarea>
-            <label>Native Ad Code (Content)</label><textarea name="native_ad" rows="4">{{ s.native_ad }}</textarea>
-            <label>Social Bar Ad Code (Bottom)</label><textarea name="socialbar_ad" rows="4">{{ s.socialbar_ad }}</textarea>
+            <label>Banner Ad Code</label><textarea name="banner_ad" rows="4">{{ s.banner_ad }}</textarea>
+            <label>Native Ad Code</label><textarea name="native_ad" rows="4">{{ s.native_ad }}</textarea>
+            <label>Social Bar Ad Code</label><textarea name="socialbar_ad" rows="4">{{ s.socialbar_ad }}</textarea>
             <button class="btn-main">UPDATE ADS</button>
         </form>
     </div>
 
-    <!-- কন্টেন্ট আপলোড (TMDB & Progress) -->
+    <!-- আপলোড কন্টেন্ট (TMDB & Progress) -->
     <div id="upBox" class="sec-box">
         <h3>📤 Upload Movie/Series</h3>
         <div style="display:flex; gap:10px;"><input type="text" id="tmdbQ" placeholder="Search TMDB..."><button onclick="tmdbSearch()" class="btn-main" style="width:100px;">Search</button></div>
@@ -348,8 +348,14 @@ ADMIN_HTML = CSS + """
             <input type="text" name="year" id="y" placeholder="Year">
             <input type="text" name="poster" id="p" placeholder="Poster URL">
             <input type="text" name="backdrop" id="b" placeholder="Backdrop URL">
-            <input type="text" name="manual_badge" placeholder="Badge (HD, 4K)">
+            <input type="text" name="manual_badge" placeholder="Badge (e.g. 4K, HD)">
             <select name="type"><option value="movie">Movie</option><option value="series">Web Series</option></select>
+            <select name="language">
+                {% for l in languages %}<option value="{{ l.name }}">{{ l.name }}</option>{% endfor %}
+            </select>
+            <select name="ott">
+                {% for o in otts %}<option value="{{ o.name }}">{{ o.name }}</option>{% endfor %}
+            </select>
             <select name="category_id">
                 {% for c in categories %}<option value="{{ c._id|string }}">{{ c.name }}</option>{% endfor %}
             </select>
@@ -362,7 +368,7 @@ ADMIN_HTML = CSS + """
     <!-- ইপিসোড এড (সার্চ ফিক্স) -->
     <div id="epBox" class="sec-box">
         <h3>🎞️ Add Episode</h3>
-        <input type="text" id="sSch" placeholder="🔍 Search series..." onkeyup="findS()" style="border:1px solid var(--main);">
+        <input type="text" id="sSch" placeholder="🔍 Search series name..." onkeyup="findS()" style="border:1px solid var(--main);">
         <form id="epFrm">
             <select name="series_id" id="sSel">
                 {% for m in movies if m.type == 'series' %}<option value="{{ m._id|string }}">{{ m.title }}</option>{% endfor %}
@@ -371,7 +377,7 @@ ADMIN_HTML = CSS + """
             <input type="number" name="episode" placeholder="Episode" required>
             <input type="file" name="video_file" id="f_ep" accept="video/mp4">
             <div class="progress-container" id="epPCont"><div class="progress-bar" id="epPBar">0%</div></div>
-            <button type="button" onclick="uploadEp()" class="btn-main">UPLOAD</button>
+            <button type="button" onclick="uploadEp()" class="btn-main">UPLOAD EPISODE</button>
         </form>
     </div>
 
@@ -409,6 +415,12 @@ ADMIN_HTML = CSS + """
         <h3>📂 Categories</h3>
         <form action="/add_cat" method="POST"><input type="text" name="name" required><button class="btn-main">Add</button></form>
         {% for c in categories %}<p>{{ c.name }} <a href="/del_cat/{{ c._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
+    </div>
+
+    <div id="langBox" class="sec-box">
+        <h3>🌐 Languages</h3>
+        <form action="/add_lang" method="POST"><input type="text" name="name" required><button class="btn-main">Add</button></form>
+        {% for l in languages %}<p>{{ l.name }} <a href="/del_lang/{{ l._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
     </div>
 </div>
 
@@ -479,10 +491,7 @@ ADMIN_HTML = CSS + """
 def index():
     query = request.args.get('q')
     cats, otts = list(categories_col.find()), list(ott_col.find())
-    if query:
-        movies = list(movies_col.find({"title": {"$regex": query, "$options": "i"}}).sort("_id", -1))
-    else:
-        movies = list(movies_col.find().sort("_id", -1))
+    movies = list(movies_col.find({"title": {"$regex": query, "$options": "i"}}).sort("_id", -1)) if query else list(movies_col.find().sort("_id", -1))
     return render_template_string(HOME_HTML, categories=cats, movies=movies, otts=otts, query=query, s=get_config())
 
 @app.route('/content/<id>')
@@ -496,9 +505,9 @@ def content_detail(id):
 @app.route('/admin')
 def admin():
     if not session.get('auth'):
-        return render_template_string(CSS + """<div class="container"><form action="/login" method="POST" class="sec-box" style="display:block; max-width:350px; margin:100px auto;"><h2>Admin Login</h2><input type="text" name="u" placeholder="Admin" required><input type="password" name="p" placeholder="Pass" required><button class="btn-main">LOGIN</button></form></div>""")
+        return render_template_string(CSS + """<div class="container"><form action="/login" method="POST" class="sec-box" style="display:block; max-width:350px; margin:100px auto;"><h2>Admin Login</h2><input type="text" name="u" placeholder="Admin"><input type="password" name="p" placeholder="Pass"><button class="btn-main">LOGIN</button></form></div>""")
     counts = {"movies": movies_col.count_documents({"type": "movie"}), "series": movies_col.count_documents({"type": "series"}), "episodes": episodes_col.count_documents({})}
-    return render_template_string(ADMIN_HTML, movies=list(movies_col.find().sort("_id", -1)), categories=list(categories_col.find()), otts=list(ott_col.find()), counts=counts, s=get_config())
+    return render_template_string(ADMIN_HTML, movies=list(movies_col.find().sort("_id", -1)), languages=list(languages_col.find()), categories=list(categories_col.find()), otts=list(ott_col.find()), counts=counts, s=get_config())
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -532,12 +541,11 @@ def add_content():
     file, v_url = request.files.get('video_file'), ""
     if file:
         with tempfile.NamedTemporaryFile(delete=False) as tf:
-            file.save(tf.name); up = cloudinary.uploader.upload_large(tf.name, resource_type="video"); v_url = up['secure_url']
+            file.save(tf.name); up = cloudinary.uploader.upload_large(tf.name, resource_type="video")
+            v_url = up['secure_url']
         os.remove(tf.name)
     movies_col.insert_one({
-        "title": request.form.get('title'), "year": request.form.get('year'), "poster": request.form.get('poster'), 
-        "backdrop": request.form.get('backdrop'), "type": request.form.get('type'), "manual_badge": request.form.get('manual_badge'), 
-        "category_id": request.form.get('category_id'), "video_url": v_url, "likes": 0
+        "title": request.form.get('title'), "year": request.form.get('year'), "poster": request.form.get('poster'), "backdrop": request.form.get('backdrop'), "type": request.form.get('type'), "manual_badge": request.form.get('manual_badge'), "language": request.form.get('language'), "ott": request.form.get('ott'), "category_id": request.form.get('category_id'), "video_url": v_url, "likes": 0
     })
     return "OK"
 
@@ -568,6 +576,16 @@ def add_cat():
 @app.route('/del_cat/<id>')
 def del_cat(id):
     if session.get('auth'): categories_col.delete_one({"_id": ObjectId(id)})
+    return redirect('/admin')
+
+@app.route('/add_lang', methods=['POST'])
+def add_lang():
+    if session.get('auth'): languages_col.insert_one({"name": request.form.get('name')})
+    return redirect('/admin')
+
+@app.route('/del_lang/<id>')
+def del_lang(id):
+    if session.get('auth'): languages_col.delete_one({"_id": ObjectId(id)})
     return redirect('/admin')
 
 @app.route('/add_ott', methods=['POST'])
