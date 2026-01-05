@@ -417,6 +417,7 @@ ADMIN_HTML = CSS + """
     <!-- ইপিসোড ম্যানেজমেন্ট (Edit/Delete) -->
     <div id="manageEpBox" class="sec-box">
         <h3>📂 Manage Episodes</h3>
+        <input type="text" id="epManageSch" placeholder="🔍 Search series to manage episodes..." onkeyup="findMSeries()" style="border:1px solid var(--main); margin-bottom:10px;">
         <select id="mSeries" onchange="loadEpisodes(this.value)">
             <option value="">Select Series to see episodes</option>
             {% for m in movies if m.type == 'series' %}<option value="{{ m._id|string }}">{{ m.title }}</option>{% endfor %}
@@ -442,10 +443,11 @@ ADMIN_HTML = CSS + """
     <!-- বাল্ক ডিলিট ও এডিট লিস্ট -->
     <div id="manageBox" class="sec-box">
         <h3>🎬 Bulk Action / Edit Content</h3>
+        <input type="text" id="bulkSearch" placeholder="🔍 Search content to edit/delete..." onkeyup="filterBulk()" style="border:1px solid var(--main); margin-bottom:15px;">
         <form action="/bulk_delete" method="POST">
-            <div style="max-height: 500px; overflow-y: auto; border: 1px solid #333; padding: 10px;">
+            <div id="bulkList" style="max-height: 500px; overflow-y: auto; border: 1px solid #333; padding: 10px;">
                 {% for m in movies %}
-                <div style="padding:10px; border-bottom:1px solid #222; display:flex; align-items:center; gap:10px;">
+                <div class="bulk-item" style="padding:10px; border-bottom:1px solid #222; display:flex; align-items:center; gap:10px;">
                     <input type="checkbox" name="ids" value="{{ m._id }}"> 
                     <span style="flex:1;">{{ m.title }} ({{ m.type }})</span>
                     <button type="button" onclick="editContent('{{ m._id }}')" style="background:#007bff; color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;"><i class="fas fa-edit"></i> Edit</button>
@@ -495,6 +497,26 @@ ADMIN_HTML = CSS + """
             let match = sel.options[i].text.toLowerCase().includes(q);
             sel.options[i].style.display = match ? "block" : "none";
         }
+    }
+
+    // Manage Episodes সেকশনের জন্য সার্চ ফাংশন
+    function findMSeries() {
+        let q = document.getElementById('epManageSch').value.toLowerCase();
+        let sel = document.getElementById('mSeries');
+        for (let i = 0; i < sel.options.length; i++) {
+            let match = sel.options[i].text.toLowerCase().includes(q);
+            sel.options[i].style.display = match ? "block" : "none";
+        }
+    }
+
+    // Bulk Action সেকশনের জন্য সার্চ ফাংশন
+    function filterBulk() {
+        let q = document.getElementById('bulkSearch').value.toLowerCase();
+        let items = document.querySelectorAll('#bulkList .bulk-item');
+        items.forEach(item => {
+            let text = item.innerText.toLowerCase();
+            item.style.display = text.includes(q) ? "flex" : "none";
+        });
     }
 
     async function loadEpisodes(sid) {
@@ -620,7 +642,6 @@ def index():
     query = request.args.get('q')
     cats, otts = list(categories_col.find()), list(ott_col.find())
     
-    # OTT ফিক্স: এখন সার্চ কুয়েরি টাইটেল অথবা OTT নামের সাথে মিললে দেখাবে
     if query:
         movies = list(movies_col.find({
             "$or": [
@@ -733,7 +754,6 @@ def update_content_data():
     movies_col.update_one({"_id": ObjectId(mid)}, {"$set": update_data})
     return "OK"
 
-# --- ইপিসোড এডিট রাউটস ---
 @app.route('/api/get_episode/<id>')
 def get_episode_api(id):
     e = episodes_col.find_one({"_id": ObjectId(id)})
