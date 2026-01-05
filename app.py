@@ -158,7 +158,7 @@ HOME_HTML = CSS + """
     <div class="ad-slot">{{ s.native_ad|safe }}</div>
 
     {% if query %}
-        <div class="cat-title">Search Results</div>
+        <div class="cat-title">Search Results for: {{ query }}</div>
         <div class="grid">
             {% for m in movies %}
             <a href="/content/{{ m._id }}" class="card">
@@ -371,7 +371,7 @@ ADMIN_HTML = CSS + """
         </form>
     </div>
 
-    <!-- এডিট বক্স (Hidden by Default) -->
+    <!-- এডিট বক্স (Movie/Series) -->
     <div id="editBox" class="sec-box">
         <h3>✏️ Edit Content</h3>
         <form id="editFrm">
@@ -422,6 +422,21 @@ ADMIN_HTML = CSS + """
             {% for m in movies if m.type == 'series' %}<option value="{{ m._id|string }}">{{ m.title }}</option>{% endfor %}
         </select>
         <div id="epList" style="margin-top:15px; border-top:1px solid #333;"></div>
+    </div>
+
+    <!-- ইপিসোড এডিট ফর্ম -->
+    <div id="editEpBox" class="sec-box">
+        <h3>✏️ Edit Episode</h3>
+        <form id="editEpFrm">
+            <input type="hidden" name="id" id="ep_e_id">
+            <label>Season</label><input type="number" name="season" id="ep_e_s" required>
+            <label>Episode</label><input type="number" name="episode" id="ep_e_e" required>
+            <p style="font-size:12px; color:orange;">Keep blank to keep old video</p>
+            <input type="file" name="video_file" id="ep_e_f" accept="video/mp4">
+            <div class="progress-container" id="ep_e_pCont"><div class="progress-bar" id="ep_e_pBar">0%</div></div>
+            <button type="button" onclick="updateEpSubmit()" class="btn-main">UPDATE EPISODE</button>
+            <button type="button" onclick="openSec('manageEpBox')" class="btn-main" style="background:#444; margin-top:10px;">CANCEL</button>
+        </form>
     </div>
 
     <!-- বাল্ক ডিলিট ও এডিট লিস্ট -->
@@ -492,10 +507,34 @@ ADMIN_HTML = CSS + """
             div.innerHTML += `<div style="padding:10px; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
                 <span>Season ${e.season} - Episode ${e.episode}</span>
                 <div>
+                    <button type="button" onclick="editEpisode('${e._id}')" style="background:#007bff; color:#fff; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;"><i class="fas fa-edit"></i> Edit</button>
                     <a href="/del_episode/${e._id}" onclick="return confirm('Delete?')" style="color:red; text-decoration:none; font-weight:bold; margin-left:10px;">Delete</a>
                 </div>
             </div>`;
         });
+    }
+
+    async function editEpisode(id) {
+        let r = await fetch(`/api/get_episode/${id}`);
+        let e = await r.json();
+        document.getElementById('ep_e_id').value = e._id;
+        document.getElementById('ep_e_s').value = e.season;
+        document.getElementById('ep_e_e').value = e.episode;
+        openSec('editEpBox');
+    }
+
+    function updateEpSubmit(){
+        let fd = new FormData(document.getElementById('editEpFrm'));
+        let xhr = new XMLHttpRequest();
+        document.getElementById('ep_e_pCont').style.display = 'block';
+        xhr.upload.onprogress = (e) => {
+            let p = Math.round((e.loaded / e.total) * 100);
+            document.getElementById('ep_e_pBar').style.width = p + '%';
+            document.getElementById('ep_e_pBar').innerText = p + '%';
+        };
+        xhr.open("POST", "/update_episode_data");
+        xhr.onload = () => { alert("Episode Updated!"); location.reload(); };
+        xhr.send(fd);
     }
 
     async function editContent(id) {
@@ -580,10 +619,18 @@ ADMIN_HTML = CSS + """
 def index():
     query = request.args.get('q')
     cats, otts = list(categories_col.find()), list(ott_col.find())
+    
+    # OTT ফিক্স: এখন সার্চ কুয়েরি টাইটেল অথবা OTT নামের সাথে মিললে দেখাবে
     if query:
-        movies = list(movies_col.find({"title": {"$regex": query, "$options": "i"}}).sort("_id", -1))
+        movies = list(movies_col.find({
+            "$or": [
+                {"title": {"$regex": query, "$options": "i"}},
+                {"ott": {"$regex": query, "$options": "i"}}
+            ]
+        }).sort("_id", -1))
     else:
         movies = list(movies_col.find().sort("_id", -1))
+        
     return render_template_string(HOME_HTML, categories=cats, movies=movies, otts=otts, query=query, s=get_config())
 
 @app.route('/content/<id>')
@@ -662,7 +709,6 @@ def add_content():
     })
     return "OK"
 
-# --- নতুন এডিট ও আপডেট রাউটস ---
 @app.route('/api/get_content/<id>')
 def get_content_api(id):
     m = movies_col.find_one({"_id": ObjectId(id)})
@@ -685,6 +731,30 @@ def update_content_data():
             update_data["video_url"] = up['secure_url']
         os.remove(tf.name)
     movies_col.update_one({"_id": ObjectId(mid)}, {"$set": update_data})
+    return "OK"
+
+# --- ইপিসোড এডিট রাউটস ---
+@app.route('/api/get_episode/<id>')
+def get_episode_api(id):
+    e = episodes_col.find_one({"_id": ObjectId(id)})
+    e['_id'] = str(e['_id'])
+    return jsonify(e)
+
+@app.route('/update_episode_data', methods=['POST'])
+def update_episode_data():
+    if not session.get('auth'): return "No", 401
+    eid = request.form.get('id')
+    update_data = {
+        "season": int(request.form.get('season')),
+        "episode": int(request.form.get('episode'))
+    }
+    file = request.files.get('video_file')
+    if file:
+        with tempfile.NamedTemporaryFile(delete=False) as tf:
+            file.save(tf.name); up = cloudinary.uploader.upload_large(tf.name, resource_type="video")
+            update_data["video_url"] = up['secure_url']
+        os.remove(tf.name)
+    episodes_col.update_one({"_id": ObjectId(eid)}, {"$set": update_data})
     return "OK"
 
 @app.route('/add_episode', methods=['POST'])
