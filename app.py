@@ -52,7 +52,7 @@ def get_config():
         settings_col.insert_one(conf)
     return conf
 
-# --- প্রিমিয়াম রেসপন্সিভ CSS (সব ফিচার সহ) ---
+# --- প্রিমিয়াম রেসপন্সিভ CSS ---
 CSS = """
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -61,7 +61,7 @@ CSS = """
     * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
     
-    /* রেইনবো লোগো ও ন্যাভবার */
+    /* রেইনবো লোগো */
     .nav { background: rgba(0,0,0,0.95); padding: 12px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--main); position: sticky; top: 0; z-index: 1000; flex-wrap: wrap; }
     .logo { 
         font-size: 28px; font-weight: bold; text-decoration: none; text-transform: uppercase; 
@@ -76,7 +76,7 @@ CSS = """
     @media (min-width: 768px) { .search-box { width: 300px; margin: 0; } }
     .search-box input { background: transparent; border: none; color: #fff; width: 100%; padding: 5px; }
 
-    /* মুভি গ্রিড রেসপন্সিভ */
+    /* মুভি গ্রিড */
     .cat-title { border-left: 5px solid var(--main); padding-left: 12px; margin: 30px 0 15px; font-size: 20px; font-weight: bold; text-transform: uppercase; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 15px; }
     @media (min-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; } }
@@ -85,20 +85,19 @@ CSS = """
     .card:hover { border-color: var(--main); transform: translateY(-5px); }
     .card-title { padding: 10px; text-align: center; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-    /* সোশ্যাল ও অ্যাকশন বার */
+    /* অ্যাকশন বার ও কমেন্ট */
     .action-bar { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
-    .action-btn { background: #222; color: #fff; padding: 10px 15px; border-radius: 5px; cursor: pointer; border: 1px solid #333; font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 8px; transition: 0.3s; }
-    .action-btn:hover { background: var(--main); border-color: var(--main); }
+    .action-btn { background: #222; color: #fff; padding: 10px 15px; border-radius: 5px; cursor: pointer; border: 1px solid #333; font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+    .action-btn:hover { background: var(--main); }
 
-    /* কমেন্ট সিস্টেম */
     .comment-section { background: #111; padding: 20px; border-radius: 10px; margin-top: 30px; border: 1px solid #222; }
-    .comment-item { background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #333; }
-    .comment-user { color: var(--main); font-weight: bold; font-size: 14px; }
-    .comment-text { margin-top: 5px; font-size: 15px; color: #ccc; }
+    .comment-item { background: #1a1a1a; padding: 15px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #333; position: relative; }
+    .comment-user { color: var(--main); font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+    .comment-text { font-size: 15px; color: #ccc; }
+    .comment-like-btn { position: absolute; bottom: 10px; right: 15px; color: #888; cursor: pointer; font-size: 13px; text-decoration: none; }
+    .comment-like-btn:hover { color: var(--main); }
 
-    /* ভিডিও ও বাটন */
-    .btn { background: var(--main); color: #fff; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; text-decoration: none; font-weight: bold; display: inline-block; text-align: center; transition: 0.3s; }
-    .btn:hover { opacity: 0.8; transform: scale(1.02); }
+    .btn { background: var(--main); color: #fff; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; text-decoration: none; font-weight: bold; display: inline-block; text-align: center; }
     video { width: 100%; border-radius: 10px; background: #000; aspect-ratio: 16/9; }
 
     /* এডমিন প্যানেল */
@@ -110,12 +109,13 @@ CSS = """
 </style>
 """
 
-# --- হোমপেজ টেম্পলেট ---
+# --- টেম্পলেটসমূহ ---
+
 HOME_HTML = CSS + """
 <nav class="nav">
     <a href="/" class="logo">{{ s.site_name }}</a>
     <form action="/" method="GET" class="search-box">
-        <input type="text" name="q" placeholder="Search movies..." value="{{ query or '' }}">
+        <input type="text" name="q" placeholder="Search movies/series..." value="{{ query or '' }}">
         <button type="submit" style="background:none; border:none; color:#aaa; cursor:pointer;"><i class="fas fa-search"></i></button>
     </form>
 </nav>
@@ -143,60 +143,60 @@ HOME_HTML = CSS + """
                 {% endfor %}
             </div>
         {% endfor %}
+        <div class="cat-title">Recently Added</div>
+        <div class="grid">
+            {% for m in movies %}
+            <a href="/movie/{{ m._id }}" class="card">
+                <img src="{{ m.poster }}" loading="lazy">
+                <div class="card-title">{{ m.title }}</div>
+            </a>
+            {% endfor %}
+        </div>
     {% endif %}
 </div>
 {{ s.popunder|safe }}
 """
 
-# --- ডিটেইলস পেজ টেম্পলেট ---
 DETAIL_HTML = CSS + """
 <nav class="nav"><a href="/" class="logo">{{ s.site_name }}</a></nav>
 <div style="background: url('{{ m.backdrop }}') center/cover fixed; position: fixed; top:0; left:0; width:100%; height:100%; filter: blur(30px) brightness(0.2); z-index:-1;"></div>
 <div class="container">
     <div style="max-width: 900px; margin: auto;">
         <video controls poster="{{ m.backdrop }}"><source src="{{ m.video_url }}" type="video/mp4"></video>
-        
         <div class="action-bar">
             <a href="/like/{{ m._id }}" class="action-btn"><i class="fas fa-heart"></i> {{ m.likes or 0 }}</a>
             <div class="action-btn" onclick="copyLink()"><i class="fas fa-share-alt"></i> Share</div>
             <a href="https://api.whatsapp.com/send?text={{ share_url }}" target="_blank" class="action-btn" style="background:#25d366;"><i class="fab fa-whatsapp"></i></a>
-            <a href="https://www.facebook.com/sharer/sharer.php?u={{ share_url }}" target="_blank" class="action-btn" style="background:#3b5998;"><i class="fab fa-facebook"></i></a>
         </div>
-
-        <h1 style="font-size: 28px; margin-bottom: 10px;">{{ m.title }} ({{ m.year }})</h1>
+        <h1>{{ m.title }} ({{ m.year }})</h1>
         <button onclick="handleDL()" class="btn" style="width:100%; margin-top:20px; height:60px; font-size:20px;">📥 DOWNLOAD NOW</button>
         <p id="dl-msg" style="color:var(--main); text-align:center; margin-top:10px; font-weight:bold;"></p>
-
         <div class="comment-section">
-            <h3><i class="fas fa-comments"></i> Comments</h3>
-            <form action="/comment/{{ m._id }}" method="POST" style="margin-bottom: 25px;">
+            <h3><i class="fas fa-comments"></i> Discussion</h3>
+            <form action="/comment/{{ m._id }}" method="POST">
                 <input type="text" name="user" placeholder="Your Name" required>
                 <textarea name="text" rows="3" placeholder="Write a comment..." required></textarea>
                 <button class="btn" style="margin-top:10px;">Post Comment</button>
             </form>
-
             {% for c in comments %}
             <div class="comment-item">
-                <div class="comment-user">{{ c.user }} <small style="float:right; color:#666;">{{ c.date }}</small></div>
+                <div class="comment-user">{{ c.user }} <small style="float:right;">{{ c.date }}</small></div>
                 <div class="comment-text">{{ c.text }}</div>
+                <a href="/like_comment/{{ m._id }}/{{ c._id }}" class="comment-like-btn"><i class="fas fa-thumbs-up"></i> {{ c.likes or 0 }}</a>
             </div>
             {% endfor %}
         </div>
     </div>
 </div>
 <script>
-    function copyLink() {
-        navigator.clipboard.writeText(window.location.href);
-        alert("Link Copied!");
-    }
+    function copyLink() { navigator.clipboard.writeText(window.location.href); alert("Link Copied!"); }
     let clicks = 0;
     function handleDL() {
         if(clicks < {{ s.ad_click_limit }}) {
             clicks++;
-            document.getElementById('dl-msg').innerText = "Ads Opening... (" + clicks + "/{{ s.ad_click_limit }})";
+            document.getElementById('dl-msg').innerText = "Ads Loading... (" + clicks + "/{{ s.ad_click_limit }})";
             window.open("{{ s.ad_link }}", "_blank");
         } else {
-            document.getElementById('dl-msg').innerText = "Starting Download...";
             window.location.href = "{{ m.video_url }}".replace("/upload/", "/upload/fl_attachment/");
         }
     }
@@ -204,27 +204,22 @@ DETAIL_HTML = CSS + """
 {{ s.popunder|safe }}
 """
 
-# --- এডমিন প্যানেল টেম্পলেট ---
 ADMIN_HTML = CSS + """
 <nav class="nav"><a href="/admin" class="logo">ADMIN PANEL</a><div style="cursor:pointer; font-size:30px; color:var(--main);" onclick="toggleMenu()">☰</div></nav>
 <div class="admin-drawer" id="drawer">
     <div style="text-align:right; padding:10px;"><span onclick="toggleMenu()" style="color:red;">[CLOSE]</span></div>
-    <span onclick="openSec('upBox')">📤 Upload Movie</span>
+    <span onclick="openSec('upBox')">📤 Upload Content</span>
     <span onclick="openSec('manageBox')">🎬 Manage Movies</span>
     <span onclick="openSec('comBox')">💬 Manage Comments</span>
     <span onclick="openSec('catBox')">📂 Categories</span>
     <span onclick="openSec('setBox')">⚙️ Settings</span>
     <a href="/logout" style="color:red;">🔴 Logout</a>
 </div>
-
 <div class="container">
     <div id="upBox" class="section-box" style="display:block;">
-        <h3>Upload Movie</h3>
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
-            <input type="text" id="tmdbQ" placeholder="Search movie on TMDB..." style="margin:0;">
-            <button class="btn" onclick="tmdbSearch()">Search</button>
-        </div>
-        <div id="tmdbRes" style="display:flex; gap:10px; overflow-x:auto; background:#000; padding:10px; border-radius:5px;"></div>
+        <h3>Upload Movie/Series</h3>
+        <input type="text" id="tmdbQ" placeholder="Search TMDB..."><button class="btn" onclick="tmdbSearch()">Search</button>
+        <div id="tmdbRes" style="display:flex; gap:10px; overflow-x:auto; margin:10px 0; background:#000; padding:10px;"></div>
         <form id="uploadForm">
             <input type="text" name="title" id="t" placeholder="Title" required>
             <input type="text" name="year" id="y" placeholder="Year">
@@ -234,49 +229,41 @@ ADMIN_HTML = CSS + """
                 {% for c in categories %}<option value="{{ c._id|string }}">{{ c.name }}</option>{% endfor %}
             </select>
             <input type="file" name="video_file" accept="video/mp4" required>
-            <button type="button" id="upBtn" onclick="submitContent()" class="btn" style="width:100%; background:green;">UPLOAD NOW</button>
+            <button type="button" id="upBtn" onclick="submitContent()" class="btn" style="width:100%; background:green;">UPLOAD</button>
         </form>
     </div>
-
     <div id="manageBox" class="section-box">
-        <h3>All Movies ({{ total_movies }})</h3>
+        <h3>Contents ({{ total_movies }})</h3>
         {% for m in movies %}
         <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #222;">
-            <span>{{ m.title }}</span>
+            <span>{{ m.title }} <small>(❤️ {{ m.likes or 0 }})</small></span>
             <a href="/del_movie/{{ m._id }}" style="color:red; text-decoration:none;">[DELETE]</a>
         </div>
         {% endfor %}
     </div>
-
     <div id="comBox" class="section-box">
-        <h3>Recent Comments</h3>
+        <h3>User Comments</h3>
         {% for c in all_comments %}
         <div style="padding:10px; border-bottom:1px solid #222;">
-            <b style="color:red;">{{ c.user }}:</b> {{ c.text }}
+            <b style="color:var(--main);">{{ c.user }}:</b> {{ c.text }} <small>(👍 {{ c.likes or 0 }})</small>
             <a href="/del_comment/{{ c._id }}" style="float:right; color:gray; text-decoration:none;">[X]</a>
         </div>
         {% endfor %}
     </div>
-
     <div id="catBox" class="section-box">
         <h3>Categories</h3>
-        <form action="/add_cat" method="POST" style="display:flex; gap:10px;">
-            <input type="text" name="name" placeholder="Name" required><button class="btn">Add</button>
-        </form>
-        {% for c in categories %}
-        <p style="margin-top:10px;">{{ c.name }} <a href="/del_cat/{{ c._id }}" style="color:red; float:right;">Delete</a></p>
-        {% endfor %}
+        <form action="/add_cat" method="POST" style="display:flex; gap:10px;"><input type="text" name="name" required><button class="btn">Add</button></form>
+        {% for c in categories %}<p style="margin-top:10px;">{{ c.name }} <a href="/del_cat/{{ c._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
     </div>
-
     <div id="setBox" class="section-box">
-        <h3>Site Settings</h3>
+        <h3>Settings</h3>
         <form action="/update_settings" method="POST">
-            <label>Site Name (Animated):</label><input type="text" name="site_name" value="{{ s.site_name }}">
-            <label>Ad Link (Direct):</label><input type="text" name="ad_link" value="{{ s.ad_link }}">
-            <label>Click Limit:</label><input type="number" name="ad_click_limit" value="{{ s.ad_click_limit }}">
+            <label>Site Name:</label><input type="text" name="site_name" value="{{ s.site_name }}">
+            <label>Ad Link:</label><input type="text" name="ad_link" value="{{ s.ad_link }}">
+            <label>Ad Click Limit:</label><input type="number" name="ad_click_limit" value="{{ s.ad_click_limit }}">
             <textarea name="popunder" placeholder="Pop-under Script">{{ s.popunder }}</textarea>
             <textarea name="native" placeholder="Native Ad Code">{{ s.native }}</textarea>
-            <button class="btn" style="width:100%;">SAVE SETTINGS</button>
+            <button class="btn" style="width:100%;">SAVE</button>
         </form>
     </div>
 </div>
@@ -312,7 +299,7 @@ ADMIN_HTML = CSS + """
 </script>
 """
 
-# --- Flask রাউটস (অ্যাপ লজিক) ---
+# --- রাউটস ---
 
 @app.route('/')
 def index():
@@ -336,12 +323,18 @@ def like_movie(id):
     movies_col.update_one({"_id": ObjectId(id)}, {"$inc": {"likes": 1}})
     return redirect(f'/movie/{id}')
 
+@app.route('/like_comment/<m_id>/<c_id>')
+def like_comment(m_id, c_id):
+    comments_col.update_one({"_id": ObjectId(c_id)}, {"$inc": {"likes": 1}})
+    return redirect(f'/movie/{m_id}')
+
 @app.route('/comment/<id>', methods=['POST'])
 def add_comment(id):
     comments_col.insert_one({
         "movie_id": id,
         "user": request.form.get('user'),
         "text": request.form.get('text'),
+        "likes": 0,
         "date": datetime.now().strftime("%d %b, %Y")
     })
     return redirect(f'/movie/{id}')
@@ -351,7 +344,7 @@ def admin():
     if not session.get('auth'):
         return render_template_string(CSS + """<div class="container"><form action="/login" method="POST" class="section-box" style="display:block; max-width:350px; margin:100px auto;"><h2>Admin Login</h2><input type="text" name="u" placeholder="Admin" required><input type="password" name="p" placeholder="Pass" required><button class="btn" style="width:100%">LOGIN</button></form></div>""")
     movies = list(movies_col.find().sort("_id", -1))
-    all_comments = list(comments_col.find().sort("_id", -1).limit(20))
+    all_comments = list(comments_col.find().sort("_id", -1).limit(50))
     return render_template_string(ADMIN_HTML, categories=list(categories_col.find()), movies=movies, all_comments=all_comments, total_movies=len(movies), s=get_config())
 
 @app.route('/login', methods=['POST'])
@@ -359,7 +352,7 @@ def login():
     if request.form['u'] == ADMIN_USER and request.form['p'] == ADMIN_PASS:
         session['auth'] = True
         return redirect('/admin')
-    return "Failed! <a href='/admin'>Retry</a>"
+    return "Fail! <a href='/admin'>Retry</a>"
 
 @app.route('/logout')
 def logout():
