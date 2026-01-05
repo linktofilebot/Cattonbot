@@ -1,7 +1,4 @@
 flask
-flask-login
 pymongo
-certifi
-yt-dlp
-requests
+dnspython
 gunicorn
