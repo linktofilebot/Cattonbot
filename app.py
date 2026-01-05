@@ -17,9 +17,9 @@ MONGO_URI = os.environ.get("MONGO_URI", "your_mongodb_uri")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "your_tmdb_api_key")
 
 cloudinary.config( 
-  cloud_name = os.environ.get("CLOUDINARY_NAME", "your_cloud_name"), 
-  api_key = os.environ.get("CLOUDINARY_API_KEY", "your_api_key"), 
-  api_secret = os.environ.get("CLOUDINARY_API_SECRET", "your_api_secret") 
+  cloud_name = os.environ.get("CLOUDINARY_NAME", "dck0nrnt2"), 
+  api_key = os.environ.get("CLOUDINARY_API_KEY", "885392694246946"), 
+  api_secret = os.environ.get("CLOUDINARY_API_SECRET", "a7y3o299JJqLfxmj9rLMK3hNbcg") 
 )
 
 # MongoDB কানেকশন ও কালেকশনস
