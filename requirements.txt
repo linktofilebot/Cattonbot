@@ -4,3 +4,4 @@ dnspython
 cloudinary
 requests
 gunicorn
+pyTelegramBotAPI
