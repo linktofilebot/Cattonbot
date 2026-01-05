@@ -11,15 +11,14 @@ import cloudinary.uploader
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "moviebox_premium_final_2026")
 
-# --- ডাটাবেস ও ক্লাউড সেটিংস ---
-# এগুলো আপনার অরিজিনাল ইউরি ও কী দিয়ে পরিবর্তন করুন
+# --- ডাটাবেস ও ক্লাউড সেটিংস (আপনার তথ্য এখানে দিন) ---
 MONGO_URI = os.environ.get("MONGO_URI", "your_mongodb_uri")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "your_tmdb_api_key")
 
 cloudinary.config( 
   cloud_name = os.environ.get("CLOUDINARY_NAME", "your_cloud_name"), 
-  api_key = "885392694246946", 
-  api_secret = "a7y3o299JJqLfxmj9rLMK3hNbcg" 
+  api_key = os.environ.get("CLOUDINARY_API_KEY", "your_api_key"), 
+  api_secret = os.environ.get("CLOUDINARY_API_SECRET", "your_api_secret") 
 )
 
 # MongoDB কানেকশন
@@ -43,8 +42,7 @@ def get_config():
         conf = {
             "type": "config", 
             "site_name": "MOVIEBOX PRO",
-            "popunder": "", "banner": "", "social_bar": "", "native": "",
-            "download_url": "https://download-link.com", 
+            "popunder": "", 
             "ad_link": "https://ad-link.com", 
             "ad_click_limit": 3
         }
@@ -60,11 +58,7 @@ CSS = """
     
     .logo { 
         color: var(--main); font-size: 26px; font-weight: bold; text-decoration: none; letter-spacing: 1px;
-        text-transform: uppercase; animation: glow 1.5s ease-in-out infinite alternate;
-    }
-    @keyframes glow {
-        from { text-shadow: 0 0 5px var(--main); }
-        to { text-shadow: 0 0 15px var(--main); }
+        text-transform: uppercase; text-shadow: 0 0 10px var(--main);
     }
 
     .nav { background: rgba(0,0,0,0.95); padding: 10px 5%; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--main); position: sticky; top: 0; z-index: 1000; flex-wrap: wrap; gap: 10px; }
@@ -73,31 +67,33 @@ CSS = """
     .search-box { position: relative; display: flex; align-items: center; background: #1a1a1a; border-radius: 20px; padding: 5px 15px; border: 1px solid #333; width: 300px; }
     .search-box input { background: transparent; border: none; color: #fff; padding: 5px; width: 100%; font-size: 14px; }
 
-    .btn { background: var(--main); color: #fff; border: none; padding: 8px 18px; border-radius: 5px; cursor: pointer; text-decoration: none; font-weight: bold; transition: 0.3s; display: inline-block; }
+    .btn { background: var(--main); color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; text-decoration: none; font-weight: bold; transition: 0.3s; display: inline-block; text-align: center; }
     .btn:hover { opacity: 0.8; transform: scale(1.05); }
 
     .cat-title { border-left: 5px solid var(--main); padding-left: 12px; margin: 30px 0 15px; font-size: 20px; font-weight: bold; text-transform: uppercase; }
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 18px; }
     @media (max-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; } }
     
-    .card { background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid #222; text-decoration: none; color: #fff; position: relative; transition: 0.4s; }
+    .card { background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid #222; text-decoration: none; color: #fff; transition: 0.4s; }
     .card:hover { border-color: var(--main); transform: translateY(-5px); }
     .card img { width: 100%; height: 250px; object-fit: cover; }
     @media (max-width: 600px) { .card img { height: 165px; } }
 
-    .video-container video { width: 100%; border-radius: 10px; border: 1px solid #333; aspect-ratio: 16/9; background: #000; }
     .progress-container { width: 100%; background: #222; border-radius: 10px; margin: 15px 0; display: none; }
-    .progress-bar { width: 0%; height: 15px; background: var(--main); border-radius: 10px; text-align: center; font-size: 10px; line-height: 15px; color: #fff; }
+    .progress-bar { width: 0%; height: 15px; background: var(--main); border-radius: 10px; text-align: center; font-size: 10px; line-height: 15px; color: #fff; transition: 0.3s; }
 
     .admin-drawer { position: fixed; top: 70px; right: 5%; background: #181818; border: 1px solid #333; border-radius: 8px; display: none; flex-direction: column; z-index: 3000; width: 250px; }
-    .admin-drawer a, .admin-drawer span { padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #252525; text-decoration: none; color: #fff; }
+    .admin-drawer span, .admin-drawer a { padding: 12px 20px; cursor: pointer; border-bottom: 1px solid #252525; text-decoration: none; color: #fff; }
+    
     .section-box { display: none; background: #111; padding: 20px; border-radius: 10px; border: 1px solid #222; margin-top: 20px; }
-    input, select, textarea { width: 100%; padding: 10px; margin: 8px 0; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 5px; }
+    input, select, textarea { width: 100%; padding: 12px; margin: 8px 0; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 5px; }
+    video { width: 100%; border-radius: 10px; background: #000; aspect-ratio: 16/9; }
 </style>
 """
 
 # --- টেম্পলেটসমূহ ---
 
+# ১. হোমপেজ
 HOME_HTML = CSS + """
 <nav class="nav">
     <a href="/" class="logo">{{ s.site_name }}</a>
@@ -110,7 +106,7 @@ HOME_HTML = CSS + """
 
 <div class="container">
     {% if query %}
-        <h3 class="cat-title">Search Results for: {{ query }}</h3>
+        <h3 class="cat-title">Search Results: {{ query }}</h3>
         <div class="grid">
             {% for m in movies %}
             <a href="/movie/{{ m._id }}" class="card">
@@ -120,23 +116,19 @@ HOME_HTML = CSS + """
             {% endfor %}
         </div>
     {% else %}
-        <!-- ক্যাটাগরি অনুযায়ী মুভি -->
         {% for cat in categories %}
-            {% set cat_id_str = cat._id|string %}
+            {% set cat_id = cat._id|string %}
             <div class="cat-title">{{ cat.name }}</div>
             <div class="grid">
-                {% for m in movies %}
-                    {% if m.category_id == cat_id_str %}
-                    <a href="/movie/{{ m._id }}" class="card">
-                        <img src="{{ m.poster }}" loading="lazy">
-                        <div style="padding:10px; text-align:center; font-size:13px;">{{ m.title }}</div>
-                    </a>
-                    {% endif %}
+                {% for m in movies if m.category_id == cat_id %}
+                <a href="/movie/{{ m._id }}" class="card">
+                    <img src="{{ m.poster }}" loading="lazy">
+                    <div style="padding:10px; text-align:center; font-size:13px;">{{ m.title }}</div>
+                </a>
                 {% endfor %}
             </div>
         {% endfor %}
         
-        <!-- যদি কোনো ক্যাটাগরি না থাকে বা সব মুভি একসাথে দেখাতে চান -->
         <div class="cat-title">Recently Added</div>
         <div class="grid">
             {% for m in movies %}
@@ -151,50 +143,54 @@ HOME_HTML = CSS + """
 {{ s.popunder|safe }}
 """
 
+# ২. ডিটেইলস পেজ
 DETAIL_HTML = CSS + """
 <nav class="nav"><a href="/" class="logo">{{ s.site_name }}</a><a href="/" class="btn">HOME</a></nav>
-<div style="background: url('{{ m.backdrop }}') center/cover; position: fixed; top:0; left:0; width:100%; height:100vh; filter: blur(25px) brightness(0.2); z-index:-1;"></div>
+<div style="background: url('{{ m.backdrop }}') center/cover fixed; position: fixed; top:0; left:0; width:100%; height:100%; filter: blur(25px) brightness(0.2); z-index:-1;"></div>
 <div class="container">
-    <div style="display: flex; flex-wrap: wrap; gap: 30px; margin-top: 50px;">
+    <div style="display: flex; flex-wrap: wrap; gap: 30px; margin-top: 40px;">
         <div style="flex: 1; min-width: 300px;">
             <img src="{{ m.poster }}" style="width:100%; border-radius:12px; border: 2px solid var(--main);">
-            <button onclick="dlHandle()" class="btn" style="width:100%; margin-top:20px; height:55px; font-size:18px;">DOWNLOAD NOW</button>
-            <p id="msg" style="color:var(--main); text-align:center; margin-top:10px;"></p>
+            <button onclick="handleDL()" class="btn" style="width:100%; margin-top:20px; height:60px; font-size:20px;">📥 DOWNLOAD NOW</button>
+            <p id="msg" style="color:var(--main); text-align:center; margin-top:15px; font-weight:bold;"></p>
         </div>
         <div style="flex: 2; min-width: 350px;">
-            <h1 style="font-size:35px; margin-bottom:10px;">{{ m.title }} ({{ m.year }})</h1>
-            <div class="video-container">
-                <video controls controlsList="nodownload" poster="{{ m.backdrop }}">
-                    <source src="{{ m.video_url }}" type="video/mp4">
-                </video>
-            </div>
-            <div style="margin-top:20px;">{{ s.native|safe }}</div>
+            <h1 style="font-size:32px; margin-bottom:15px;">{{ m.title }} ({{ m.year }})</h1>
+            <video controls poster="{{ m.backdrop }}"><source src="{{ m.video_url }}" type="video/mp4"></video>
         </div>
     </div>
 </div>
 <script>
     let clicks = 0;
-    function dlHandle() {
-        if(clicks < {{ s.ad_click_limit }}) {
+    const limit = {{ s.ad_click_limit }};
+    const adUrl = "{{ s.ad_link }}";
+    // Cloudinary Force Download Logic
+    const rawUrl = "{{ m.video_url }}";
+    const downloadUrl = rawUrl.replace("/upload/", "/upload/fl_attachment/");
+
+    function handleDL() {
+        if(clicks < limit) {
             clicks++;
-            document.getElementById('msg').innerText = "Redirecting... (" + clicks + "/{{ s.ad_click_limit }})";
-            window.open("{{ s.ad_link }}", "_blank");
+            document.getElementById('msg').innerText = "Redirecting... (" + clicks + "/" + limit + ")";
+            window.open(adUrl, "_blank");
         } else {
-            window.location.href = "{{ s.download_url }}";
+            document.getElementById('msg').innerText = "Starting Download...";
+            window.location.href = downloadUrl;
         }
     }
 </script>
 """
 
+# ৩. এডমিন প্যানেল
 ADMIN_HTML = CSS + """
 <nav class="nav">
     <a href="/admin" class="logo">ADMIN PANEL</a>
-    <div style="cursor:pointer; font-size:24px;" onclick="toggleMenu()">☰</div>
+    <div style="cursor:pointer; font-size:28px;" onclick="toggleMenu()">☰</div>
 </nav>
 
 <div class="admin-drawer" id="drawer">
     <span onclick="openSec('upBox')">Upload Movie</span>
-    <span onclick="openSec('manageBox')">Manage Movies</span>
+    <span onclick="openSec('manageBox')">Manage Movies ({{ total_movies }})</span>
     <span onclick="openSec('catBox')">Categories</span>
     <span onclick="openSec('setBox')">Settings</span>
     <a href="/logout" style="color:red;">Logout</a>
@@ -210,42 +206,38 @@ ADMIN_HTML = CSS + """
             <input type="text" name="year" id="y" placeholder="Year">
             <input type="text" name="poster" id="p" placeholder="Poster URL">
             <input type="text" name="backdrop" id="b" placeholder="Backdrop URL">
-            <select name="category_id">
-                {% for c in categories %}<option value="{{ c._id }}">{{ c.name }}</option>{% endfor %}
+            <select name="category_id" required>
+                {% for c in categories %}<option value="{{ c._id|string }}">{{ c.name }}</option>{% endfor %}
             </select>
-            <input type="file" name="video_file" id="v_file" accept="video/mp4" required>
+            <input type="file" name="video_file" accept="video/mp4" required>
             <div class="progress-container" id="pCont"><div class="progress-bar" id="pBar">0%</div></div>
-            <button type="button" id="upBtn" onclick="submitContent()" class="btn" style="width:100%;">UPLOAD</button>
+            <button type="button" id="upBtn" onclick="submitContent()" class="btn" style="width:100%; background:green;">UPLOAD NOW</button>
         </form>
     </div>
 
     <div id="manageBox" class="section-box">
         <h3>Manage Movies ({{ total_movies }})</h3>
-        <input type="text" id="admS" onkeyup="filterM()" placeholder="Quick search...">
-        <div style="max-height:400px; overflow-y:auto;">
-            {% for m in movies %}
-            <div class="m-item" style="padding:10px; border-bottom:1px solid #222; display:flex; justify-content:space-between;">
-                <span>{{ m.title }}</span>
-                <a href="/del_movie/{{ m._id }}" style="color:red;" onclick="return confirm('Delete?')">Delete</a>
-            </div>
-            {% endfor %}
+        {% for m in movies %}
+        <div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #222;">
+            <span>{{ m.title }}</span>
+            <a href="/del_movie/{{ m._id }}" style="color:red; text-decoration:none;" onclick="return confirm('Delete?')">DELETE</a>
         </div>
+        {% endfor %}
     </div>
-    
+
     <div id="catBox" class="section-box">
         <h3>Categories</h3>
-        <form action="/add_cat" method="POST"><input type="text" name="name" placeholder="Cat Name"><button class="btn">Add</button></form>
-        {% for c in categories %}<p>{{ c.name }} <a href="/del_cat/{{ c._id }}" style="color:red; float:right;">X</a></p>{% endfor %}
+        <form action="/add_cat" method="POST"><input type="text" name="name" placeholder="Category Name"><button class="btn">Add</button></form>
+        {% for c in categories %}<p style="padding:10px;">{{ c.name }} <a href="/del_cat/{{ c._id }}" style="float:right; color:red;">X</a></p>{% endfor %}
     </div>
 
     <div id="setBox" class="section-box">
         <h3>Settings</h3>
         <form action="/update_settings" method="POST">
-            <input type="text" name="site_name" value="{{ s.site_name }}">
-            <input type="text" name="download_url" value="{{ s.download_url }}">
-            <input type="text" name="ad_link" value="{{ s.ad_link }}">
-            <input type="number" name="ad_click_limit" value="{{ s.ad_click_limit }}">
-            <button class="btn">Save</button>
+            <label>Site Name</label><input type="text" name="site_name" value="{{ s.site_name }}">
+            <label>Ad Link</label><input type="text" name="ad_link" value="{{ s.ad_link }}">
+            <label>Ad Click Limit</label><input type="number" name="ad_click_limit" value="{{ s.ad_click_limit }}">
+            <button class="btn">Save Settings</button>
         </form>
     </div>
 </div>
@@ -262,7 +254,7 @@ ADMIN_HTML = CSS + """
         d.results.slice(0,5).forEach(i => {
             let img = document.createElement('img');
             img.src = "https://image.tmdb.org/t/p/w92"+i.poster_path;
-            img.style.height = "100px"; img.style.cursor="pointer";
+            img.style.cursor="pointer"; img.style.height="100px";
             img.onclick = () => {
                 document.getElementById('t').value = i.title || i.name;
                 document.getElementById('y').value = (i.release_date || i.first_air_date || '').split('-')[0];
@@ -284,7 +276,7 @@ ADMIN_HTML = CSS + """
             document.getElementById('pBar').innerText = p + '%';
         };
         xhr.open("POST", "/add_content");
-        xhr.onload = () => { alert("Success!"); location.reload(); };
+        xhr.onload = () => { alert("Done!"); location.reload(); };
         xhr.send(fd);
     }
 </script>
@@ -295,12 +287,11 @@ ADMIN_HTML = CSS + """
 @app.route('/')
 def index():
     query = request.args.get('q')
-    categories = list(categories_col.find().sort("order", 1))
+    categories = list(categories_col.find())
     if query:
-        movies = list(movies_col.find({"title": {"$regex": query, "$options": "i"}}).sort("_id", -1))
+        movies = list(movies_col.find({"title": {"$regex": query, "$options": "i"}}))
     else:
         movies = list(movies_col.find().sort("_id", -1))
-    
     return render_template_string(HOME_HTML, categories=categories, movies=movies, query=query, s=get_config())
 
 @app.route('/movie/<id>')
@@ -312,13 +303,13 @@ def movie_detail(id):
 @app.route('/admin')
 def admin():
     if not session.get('auth'):
-        return render_template_string(CSS + """<div class="container"><form action="/login" method="POST" class="section-box" style="display:block; max-width:320px; margin:100px auto;"><h2>Login</h2><input type="text" name="u" placeholder="Admin"><input type="password" name="p" placeholder="Pass"><button class="btn" style="width:100%">LOGIN</button></form></div>""")
+        return render_template_string(CSS + """<div class="container"><form action="/login" method="POST" class="section-box" style="display:block; max-width:320px; margin:100px auto;"><h2>Admin Login</h2><input type="text" name="u" placeholder="Admin"><input type="password" name="p" placeholder="Password"><button class="btn" style="width:100%">LOGIN</button></form></div>""")
     
-    all_movies = list(movies_col.find().sort("_id", -1))
+    m_list = list(movies_col.find().sort("_id", -1))
     return render_template_string(ADMIN_HTML, 
         categories=list(categories_col.find()), 
-        movies=all_movies, 
-        total_movies=len(all_movies), 
+        movies=m_list, 
+        total_movies=len(m_list), 
         s=get_config())
 
 @app.route('/login', methods=['POST'])
@@ -326,7 +317,7 @@ def login():
     if request.form['u'] == ADMIN_USER and request.form['p'] == ADMIN_PASS:
         session['auth'] = True
         return redirect('/admin')
-    return "Login Failed"
+    return "Login Fail"
 
 @app.route('/logout')
 def logout():
@@ -335,10 +326,8 @@ def logout():
 
 @app.route('/add_content', methods=['POST'])
 def add_content():
-    if not session.get('auth'): return "Unauthorized", 401
+    if not session.get('auth'): return "No", 401
     file = request.files.get('video_file')
-    if not file: return "No file", 400
-    
     with tempfile.NamedTemporaryFile(delete=False) as tf:
         file.save(tf.name)
         up = cloudinary.uploader.upload_large(tf.name, resource_type="video")
@@ -349,20 +338,19 @@ def add_content():
         "year": request.form.get('year'),
         "poster": request.form.get('poster'),
         "backdrop": request.form.get('backdrop'),
-        "category_id": str(request.form.get('category_id')), # ID টি স্ট্রিং হিসেবে সেভ করছি
+        "category_id": request.form.get('category_id'),
         "video_url": up['secure_url']
     })
     return "OK"
 
-@app.route('/add_cat', methods=['POST'])
-def add_cat():
-    if session.get('auth'):
-        categories_col.insert_one({"name": request.form.get('name'), "order": 0})
-    return redirect('/admin')
-
 @app.route('/del_movie/<id>')
 def del_movie(id):
     if session.get('auth'): movies_col.delete_one({"_id": ObjectId(id)})
+    return redirect('/admin')
+
+@app.route('/add_cat', methods=['POST'])
+def add_cat():
+    if session.get('auth'): categories_col.insert_one({"name": request.form.get('name')})
     return redirect('/admin')
 
 @app.route('/del_cat/<id>')
@@ -375,7 +363,6 @@ def update_settings():
     if session.get('auth'):
         settings_col.update_one({"type": "config"}, {"$set": {
             "site_name": request.form.get('site_name'),
-            "download_url": request.form.get('download_url'),
             "ad_link": request.form.get('ad_link'),
             "ad_click_limit": int(request.form.get('ad_click_limit', 0))
         }})
@@ -384,8 +371,7 @@ def update_settings():
 @app.route('/api/tmdb')
 def tmdb():
     q = request.args.get('q')
-    res = requests.get(f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={q}")
-    return jsonify(res.json())
+    return jsonify(requests.get(f"https://api.themoviedb.org/3/search/multi?api_key={TMDB_API_KEY}&query={q}").json())
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000)
