@@ -1,7 +1,7 @@
-flask
+Flask
 pymongo
 dnspython
-cloudinary
 requests
-gunicorn
+cloudinary
 pyTelegramBotAPI
+gunicorn
